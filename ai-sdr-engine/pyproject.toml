@@ -1,0 +1,17 @@
+[project]
+name = "azentio-sdr-engine"
+version = "0.1.0"
+description = "Azentio AI SDR - decision engine + engagement API (OpenAI Agents SDK)"
+requires-python = ">=3.12"
+dependencies = [
+    "fastapi>=0.115",
+    "uvicorn[standard]>=0.30",
+    "openai-agents>=0.3",
+    "openai>=1.99",
+    "httpx>=0.27",
+    "pydantic>=2.8",
+    "python-multipart>=0.0.9",
+]
+
+[tool.uv]
+package = false

@@ -1,0 +1,119 @@
+{
+  "label": "Source: publicly available Azentio material (azentio.com)",
+  "version": "kb-v1",
+  "retrievedAt": "2026-10-31",
+  "sender": "Azentio Sales Development Team",
+  "usageRules": [
+    "Only claims listed here may be used to describe Azentio or its products; cite their ids.",
+    "Claims are taken near-verbatim from azentio.com; do not add figures, customer names, outcomes or superlatives beyond the claim text.",
+    "Never discuss pricing, discounts, commercial terms, SLAs, uptime, guarantees, delivery timelines or other commitments; route those to a specialist."
+  ],
+  "company": {
+    "name": "Azentio Software",
+    "claims": [
+      {"id": "az-01", "text": "Azentio delivers purpose-built, intelligence-driven technology designed to transform banking, insurance, capital markets and ERP.", "sourceUrl": "https://www.azentio.com/"},
+      {"id": "az-02", "text": "Azentio has deep experience in the BFSI and enterprise sectors across Southeast Asia, Africa and the Middle East, including local market dynamics and regulatory landscapes.", "sourceUrl": "https://www.azentio.com/about-azentio"},
+      {"id": "az-03", "text": "Azentio offers mission-critical software for financial institutions that is robust, secure and scalable.", "sourceUrl": "https://www.azentio.com/about-azentio"}
+    ]
+  },
+  "products": {
+    "lending_platform": {
+      "name": "Azentio Lending",
+      "summary": "Future-ready digital lending suite for banks and NBFCs.",
+      "sourceUrl": "https://www.azentio.com/banking/lending",
+      "claims": [
+        {"id": "lend-01", "text": "Azentio Lending is a unified lending suite that helps banks and NBFCs achieve speed, scalability and policy adherence.", "sourceUrl": "https://www.azentio.com/banking/lending"},
+        {"id": "lend-02", "text": "Azentio Lending streamlines loan origination, management and collections through intelligent automation, real-time insights and a robust decisioning engine.", "sourceUrl": "https://www.azentio.com/banking/lending"},
+        {"id": "lend-03", "text": "Azentio Lending has built-in support for both conventional and Islamic finance.", "sourceUrl": "https://www.azentio.com/banking/lending"},
+        {"id": "lend-04", "text": "Azentio Lending supports retail, SME and corporate lending segments.", "sourceUrl": "https://www.azentio.com/banking/lending"},
+        {"id": "lend-05", "text": "Intelligent workflows and scoring models support quicker credit approvals.", "sourceUrl": "https://www.azentio.com/banking/lending"},
+        {"id": "lend-06", "text": "Decisioning as a service provides a cloud-native decisioning engine with dynamic scoring and real-time approvals.", "sourceUrl": "https://www.azentio.com/banking/lending"},
+        {"id": "lend-07", "text": "Azentio was recognized as a Category Leader in the Chartis RiskTech Quadrants for Credit Lending Operations Solutions 2026 report.", "sourceUrl": "https://www.azentio.com/insights/awards-and-analyst-reports/azentio-recognized-as-a-category-leader-in-chartis-risktech-quadrants-for-credit-lending-operations-solutions-2026-report"}
+      ]
+    },
+    "islamic_banking": {
+      "name": "Azentio iMAL",
+      "summary": "AAOIFI-certified core for Shari'ah-compliant banking.",
+      "sourceUrl": "https://www.azentio.com/banking/imal-islamic-banking",
+      "claims": [
+        {"id": "isl-01", "text": "iMAL is an AAOIFI-certified core banking platform built specifically for Shari'ah-compliant finance.", "sourceUrl": "https://www.azentio.com/banking/imal-islamic-banking"},
+        {"id": "isl-02", "text": "iMAL covers retail, corporate, treasury, investment, trade finance and microfinance.", "sourceUrl": "https://www.azentio.com/banking/imal-islamic-banking"},
+        {"id": "isl-03", "text": "Every product and process in iMAL is Shari'ah-aligned by default.", "sourceUrl": "https://www.azentio.com/banking/imal-islamic-banking"},
+        {"id": "isl-04", "text": "iMAL is a modular, parameter-driven platform that helps banks launch new offerings quickly and expand into new markets.", "sourceUrl": "https://www.azentio.com/banking/imal-islamic-banking"},
+        {"id": "isl-05", "text": "iMAL is API-first and cloud-ready, integrating with mobile, online and open banking ecosystems.", "sourceUrl": "https://www.azentio.com/banking/imal-islamic-banking"},
+        {"id": "isl-06", "text": "iMAL provides end-to-end lifecycle management for Islamic financing products, covering origination, disbursement, repayments and collections.", "sourceUrl": "https://www.azentio.com/banking/imal-islamic-banking"},
+        {"id": "isl-07", "text": "Azentio iMAL was named Best Islamic Core Banking Software 2026 at the Global Islamic Finance Awards (GIFA).", "sourceUrl": "https://www.azentio.com/awards-and-analyst-reports/analyst-reports/imal-awarded-best-islamic-banking-core-system-2026"}
+      ]
+    },
+    "aml_compliance": {
+      "name": "Azentio AMLOCK",
+      "summary": "AI-powered financial crime and compliance platform.",
+      "sourceUrl": "https://www.azentio.com/risk-compliance",
+      "claims": [
+        {"id": "aml-01", "text": "AMLOCK is an AI-powered, all-in-one financial crime and compliance platform tailored for banks and financial institutions.", "sourceUrl": "https://www.azentio.com/risk-compliance"},
+        {"id": "aml-02", "text": "AMLOCK delivers an integrated approach to KYC onboarding, real-time screening, ongoing monitoring, regulatory reporting and investigations.", "sourceUrl": "https://www.azentio.com/risk-compliance"},
+        {"id": "aml-03", "text": "AMLOCK Advanced Analytics uses AI and machine learning on historical data and customer behavior to uncover hidden AML patterns and risks.", "sourceUrl": "https://www.azentio.com/risk-compliance/advanced-analytics"},
+        {"id": "aml-04", "text": "Automated alerts suppression filters irrelevant alerts so investigation teams can focus on high-risk cases.", "sourceUrl": "https://www.azentio.com/risk-compliance/advanced-analytics"},
+        {"id": "aml-05", "text": "AMLOCK screening checks prospects, customers and transactions in real time against sanctions lists, politically exposed persons, adverse media and other watchlists.", "sourceUrl": "https://www.azentio.com/risk-compliance/sanctions-screening"},
+        {"id": "aml-06", "text": "AMLOCK combines global coverage with local adaptability, with configurable solutions tailored to local regulations across multiple jurisdictions.", "sourceUrl": "https://www.azentio.com/risk-compliance"},
+        {"id": "aml-07", "text": "Azentio was named a Category Leader in the Chartis RiskTech AML Transaction Monitoring Solutions 2026 report for AMLOCK.", "sourceUrl": "https://www.azentio.com/insights/awards-and-analyst-reports/azentio-named-chartis-category-leader-in-aml-transaction-monitoring"}
+      ]
+    },
+    "digital_banking": {
+      "name": "Azentio Digital",
+      "summary": "Digital banking, onboarding and payments suite.",
+      "sourceUrl": "https://www.azentio.com/banking/digital",
+      "claims": [
+        {"id": "dig-01", "text": "Azentio's digital banking suite brings together Digital Banking, Digital Onboarding and Payments Hub.", "sourceUrl": "https://www.azentio.com/banking/digital"},
+        {"id": "dig-02", "text": "Azentio Digital unifies multiple channels to provide a personalized, seamless digital experience for retail, corporate and investment banking.", "sourceUrl": "https://www.azentio.com/banking/digital"}
+      ]
+    }
+  },
+  "themes": {
+    "next_gen_lending": {
+      "title": "Next-generation lending",
+      "aliases": ["next-gen lending", "next gen lending", "next-generation lending", "digital lending", "lending transformation", "lending platform", "loan origination", "smarter lending"],
+      "products": ["lending_platform"],
+      "sourceUrl": "https://www.azentio.com/banking/lending",
+      "angles": [
+        {"id": "thm-lend-01", "text": "Lenders are looking at how intelligent workflows and decisioning can speed up credit approvals.", "sourceUrl": "https://www.azentio.com/banking/lending"},
+        {"id": "thm-lend-02", "text": "Lending teams want unified data and workflows across origination, loan management and collections.", "sourceUrl": "https://www.azentio.com/banking/lending"},
+        {"id": "thm-lend-03", "text": "Institutions offering both conventional and Islamic finance want one lending platform that supports both.", "sourceUrl": "https://www.azentio.com/banking/lending"}
+      ]
+    },
+    "ai_in_aml": {
+      "title": "AI in anti-money laundering",
+      "aliases": ["ai in aml", "ai in anti-money laundering", "anti-money laundering", "anti money laundering", "aml", "financial crime", "compliance monitoring", "transaction monitoring", "sanctions screening"],
+      "products": ["aml_compliance"],
+      "sourceUrl": "https://www.azentio.com/risk-compliance",
+      "angles": [
+        {"id": "thm-aml-01", "text": "Compliance teams are exploring how AI and machine learning can help focus investigators on high-risk alerts.", "sourceUrl": "https://www.azentio.com/risk-compliance/advanced-analytics"},
+        {"id": "thm-aml-02", "text": "Banks are reviewing how KYC, screening, monitoring and investigations fit together on one platform.", "sourceUrl": "https://www.azentio.com/risk-compliance"},
+        {"id": "thm-aml-03", "text": "Institutions operating across several jurisdictions need AML controls that adapt to local regulations.", "sourceUrl": "https://www.azentio.com/risk-compliance"}
+      ]
+    },
+    "islamic_digital_transformation": {
+      "title": "Islamic digital transformation",
+      "aliases": ["islamic digital", "islamic digital banking", "islamic banking", "islamic banking modernization", "islamic banking modernisation", "digital transformation", "shariah", "shari'ah", "islamic finance", "core banking modernisation", "core banking modernization"],
+      "products": ["islamic_banking", "digital_banking"],
+      "sourceUrl": "https://www.azentio.com/insights/thought-leadership/islamic-banking-modernization-building-the-core-foundation-for-trusted-growth",
+      "angles": [
+        {"id": "thm-isl-01", "text": "Islamic banks are modernizing the core as the foundation for trusted growth and digital customer journeys.", "sourceUrl": "https://www.azentio.com/insights/thought-leadership/islamic-banking-modernization-building-the-core-foundation-for-trusted-growth"},
+        {"id": "thm-isl-02", "text": "Product teams want to launch new Shari'ah-compliant offerings quickly while keeping compliance consistent.", "sourceUrl": "https://www.azentio.com/banking/imal-islamic-banking"},
+        {"id": "thm-isl-03", "text": "Transformation leaders are weighing how the core platform connects with mobile, online and open banking channels.", "sourceUrl": "https://www.azentio.com/banking/imal-islamic-banking"}
+      ]
+    }
+  },
+  "forbiddenTopics": [
+    "pricing, fees, licence costs or currency amounts",
+    "discounts, free trials, free checks, promotions or commercial terms",
+    "SLAs, uptime, availability figures or service guarantees",
+    "implementation timelines, go-live dates or delivery commitments",
+    "specific meeting dates or times, or claiming a meeting is booked",
+    "named customers, references or case-study outcomes and percentages",
+    "statistics, ROI or performance figures",
+    "competitor comparisons",
+    "invented pain points, prior relationships or familiarity with the prospect",
+    "regulatory or legal advice"
+  ]
+}
