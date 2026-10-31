@@ -393,4 +393,34 @@ async def sse() -> AsyncIterator[str]:
 # Recent live events (oldest first)
 @router.get("/events/recent", tags=["events"])
 def recent_events(limit: int = 100, leadId: Optional[str] = None) -> dict[str, Any]:
-    return {"items": events.recent(limit, leadId)}
+    live = events.recent(limit, leadId)
+    seen = {(e["payload"].get("runId"), e["payload"].get("name"), e["payload"].get("at")) for e in live if e.get("type") == "run.step"}
+    steps = [e for e in live if e.get("type") == "run.step"] + [e for e in _saved_step_events(leadId) if (e["payload"]["runId"], e["payload"]["name"], e["payload"]["at"]) not in seen]
+    updates = [e for e in live if e.get("type") != "run.step"]
+    oldest_live = min((e.get("occurredAt") or "" for e in updates), default="9999")
+    updates += [e for e in _saved_update_events(leadId) if (e.get("occurredAt") or "") < oldest_live]
+    by_time = lambda e: e.get("occurredAt") or ""
+    return {"items": sorted(sorted(steps, key=by_time)[-limit:] + sorted(updates, key=by_time)[-limit:], key=by_time)}
+
+
+# Lifecycle updates rebuilt from the saved CRM event log (same shape as live events)
+def _saved_update_events(lead_id: Optional[str] = None, limit: int = 120) -> list[dict[str, Any]]:
+    from app.contracts import CrmEvent
+    rows = [c for c in db.list_("crm_events", CrmEvent, limit=100000) if lead_id is None or c.leadId == lead_id]
+    rows = sorted(rows, key=lambda c: c.createdAt or "")[-limit:]
+    return [{"id": c.id, "type": c.type, "leadId": c.leadId, "occurredAt": c.createdAt, "payload": c.payload} for c in rows]
+
+
+# Agent steps rebuilt from saved runs, so the activity feed survives restarts and is shared across server processes
+def _saved_step_events(lead_id: Optional[str] = None, runs: int = 40) -> list[dict[str, Any]]:
+    from app.contracts import Run
+    items = []
+    latest = sorted((r for r in db.list_("runs", Run, limit=100000) if lead_id is None or r.leadId == lead_id),
+                    key=lambda r: r.startedAt or "", reverse=True)[:runs]
+    for r in latest:
+        for i, st in enumerate(r.steps):
+            at = st.get("at") or r.startedAt
+            items.append({"id": f"step_{r.id}_{i}", "type": "run.step", "leadId": r.leadId, "occurredAt": at,
+                          "payload": {"runId": r.id, "kind": r.kind, "name": st.get("name"), "status": st.get("status"),
+                                      "detail": st.get("detail"), "at": at, "durationMs": st.get("durationMs")}})
+    return items
