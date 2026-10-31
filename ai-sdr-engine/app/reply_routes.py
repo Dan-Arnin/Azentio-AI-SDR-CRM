@@ -7,6 +7,7 @@ import secrets
 import sqlite3
 from contextlib import closing
 
+from app import sqlstore
 from app import config
 from app.inbox import InboxStore
 
@@ -22,7 +23,7 @@ def route_for(thread_id: str) -> dict | None:
     domain = receiving_domain()
     if not domain:
         return None
-    with closing(sqlite3.connect(config.DB_PATH, timeout=15)) as conn, conn:
+    with closing(sqlstore.connect(config.DB_PATH, timeout=15)) as conn, conn:
         conn.row_factory = sqlite3.Row
         conn.execute('''CREATE TABLE IF NOT EXISTS reply_routes (
             thread_id TEXT PRIMARY KEY, token TEXT UNIQUE NOT NULL, domain TEXT NOT NULL)''')

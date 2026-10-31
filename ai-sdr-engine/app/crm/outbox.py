@@ -11,6 +11,7 @@ from uuid import uuid4
 
 import httpx
 
+from app import sqlstore
 from app import config, db, events
 from app.contracts import CrmEvent, now_iso
 from app.crm import mock_crm
@@ -28,7 +29,7 @@ _recovery_task: Optional[asyncio.Task] = None
 @contextmanager
 def _tx():
     db.conn()
-    conn = sqlite3.connect(config.DB_PATH, timeout=10, isolation_level=None)
+    conn = sqlstore.connect(config.DB_PATH, timeout=10, isolation_level=None)
     conn.row_factory = sqlite3.Row
     try:
         conn.execute('PRAGMA busy_timeout=10000')

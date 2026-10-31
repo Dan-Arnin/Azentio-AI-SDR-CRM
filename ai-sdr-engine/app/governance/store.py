@@ -8,6 +8,7 @@ import threading
 from contextlib import contextmanager
 from typing import Any, Iterator, Optional
 
+from app import sqlstore
 from app import config
 from app.contracts import new_id, now_iso
 
@@ -30,13 +31,35 @@ CREATE TABLE IF NOT EXISTS gov_settings (key TEXT PRIMARY KEY, value TEXT NOT NU
 """
 
 
+# PostgreSQL version of the append-only guard (the SQLite triggers above do the same locally)
+PG_GUARD = [
+    """CREATE OR REPLACE FUNCTION gov_audit_append_only() RETURNS trigger LANGUAGE plpgsql AS $$
+       BEGIN RAISE EXCEPTION 'audit log is append-only'; END $$""",
+    "CREATE OR REPLACE TRIGGER gov_audit_no_change BEFORE UPDATE OR DELETE ON gov_audit FOR EACH ROW EXECUTE FUNCTION gov_audit_append_only()",
+    "CREATE OR REPLACE TRIGGER gov_audit_no_truncate BEFORE TRUNCATE ON gov_audit FOR EACH STATEMENT EXECUTE FUNCTION gov_audit_append_only()",
+]
+_pg_guarded = False
+
+
+def _ensure_schema(conn) -> None:
+    global _pg_guarded
+    if not sqlstore.is_postgres():
+        conn.executescript(SCHEMA)
+        return
+    conn.executescript("\n".join(line for line in SCHEMA.splitlines() if "CREATE TRIGGER" not in line))
+    if not _pg_guarded:
+        for statement in PG_GUARD:
+            conn.execute(statement)
+        _pg_guarded = True
+
+
 @contextmanager
 def _conn() -> Iterator[sqlite3.Connection]:
     config.DB_PATH.parent.mkdir(parents=True, exist_ok=True)
-    conn = sqlite3.connect(config.DB_PATH, timeout=10)
+    conn = sqlstore.connect(config.DB_PATH, timeout=10)
     conn.row_factory = sqlite3.Row
     try:
-        conn.executescript(SCHEMA)
+        _ensure_schema(conn)
         yield conn
         conn.commit()
     except BaseException:

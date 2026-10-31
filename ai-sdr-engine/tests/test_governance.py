@@ -16,11 +16,13 @@ from pathlib import Path
 _tmp = tempfile.mkdtemp()
 os.environ.update(DB_PATH=str(Path(_tmp) / "gov.sqlite3"), CONSOLE_PASSWORD="test-pass", EMAIL_TRANSPORT="simulated",
                   LLM_BACKEND="api_key", OPENAI_API_KEY="", CRM_WEBHOOK_URL="")
+# With ENGINE_DATABASE_URL set, the same checks run on PostgreSQL in a throwaway schema
+os.environ.setdefault("ENGINE_DB_SCHEMA", f"test_gov_{os.getpid()}")
 
 import pytest  # noqa: E402
 from fastapi.testclient import TestClient  # noqa: E402
 
-from app import config  # noqa: E402
+from app import config, sqlstore  # noqa: E402
 from app.main import app  # noqa: E402
 
 GCC = {"name": "GCC compliance heads", "theme": "AI-powered AML intelligence", "touchDays": [0, 3, 7],
@@ -63,9 +65,12 @@ def campaign(mgr):
 
 
 def audit_rows(action=None):
-    with sqlite3.connect(config.DB_PATH) as c:
-        q = "SELECT actor, action, record_id FROM gov_audit" + (" WHERE action = ?" if action else "")
-        return c.execute(q, (action,) if action else ()).fetchall()
+    c = sqlstore.connect(config.DB_PATH)
+    try:
+        q = "SELECT actor, action, record_id FROM gov_audit" + (" WHERE action = ?" if action else "") + " ORDER BY at, rowid"
+        return c.execute(q, (action,) if action else None).fetchall()
+    finally:
+        c.close()
 
 
 def drafts(client, **eq):
@@ -114,10 +119,14 @@ def test_approve_reject_edit_each_add_one_audit_event(mgr, campaign):
 
 
 def test_audit_log_is_append_only():
-    with sqlite3.connect(config.DB_PATH) as c:
-        for sql in ("UPDATE gov_audit SET actor = 'x'", "DELETE FROM gov_audit"):
+    for sql in ("UPDATE gov_audit SET actor = 'x'", "DELETE FROM gov_audit"):
+        c = sqlstore.connect(config.DB_PATH)
+        try:
             with pytest.raises(sqlite3.DatabaseError, match="append-only"):
                 c.execute(sql)
+        finally:
+            c.rollback()
+            c.close()
     src = "\n".join(p.read_text() for p in Path(__file__).resolve().parents[1].joinpath("app").rglob("*.py"))
     assert not re.search(r"(UPDATE|DELETE FROM)\s+gov_audit", src)
 
@@ -180,8 +189,11 @@ def test_prompt_log_keeps_field_names_never_values():
     phone = "+971 50 555 0199"
     prompt = '{"CONTACT": {"firstName": "Layla", "phone": "%s"}, "KIND": "qualifying_email"}\n<untrusted_inquiry>call me</untrusted_inquiry>' % phone
     calllog.record("sdr_drafter", "test", "test-model", time.perf_counter(), fields=calllog.field_names(prompt))
-    with sqlite3.connect(config.DB_PATH) as c:
+    c = sqlstore.connect(config.DB_PATH)
+    try:
         bodies = [r[0] for r in c.execute("SELECT body FROM ai_calls").fetchall()]
+    finally:
+        c.close()
     assert bodies and not any(phone in b or "Layla" in b for b in bodies)
     assert any("CONTACT.phone" in b for b in bodies)  # the field name is visible, so the check can count it
 

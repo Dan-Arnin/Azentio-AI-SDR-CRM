@@ -16,6 +16,7 @@ from typing import Any
 
 import httpx
 
+from app import sqlstore
 from app.contracts import Enrichment, Evidence, LeadInput
 from app.engine.enrichment import company_domain_for, normalize_country, normalize_domain, _differs
 
@@ -42,7 +43,7 @@ def _cache(path: Path | None, key: str, value: dict | None = None) -> dict | Non
     if path is None:
         return None
     path.parent.mkdir(parents=True, exist_ok=True)
-    with sqlite3.connect(path, timeout=5) as con:
+    with sqlstore.connect(path, timeout=5) as con:
         con.execute("CREATE TABLE IF NOT EXISTS apollo_cache (key TEXT PRIMARY KEY, payload TEXT NOT NULL, at REAL NOT NULL)")
         if value is not None:
             con.execute("INSERT OR REPLACE INTO apollo_cache VALUES (?,?,?)", (key, json.dumps(value), time.time()))

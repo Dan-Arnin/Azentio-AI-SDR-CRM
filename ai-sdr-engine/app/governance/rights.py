@@ -8,6 +8,7 @@ from typing import Any
 
 from pydantic import BaseModel, ConfigDict
 
+from app import sqlstore
 from app import config, db
 from app.contracts import Assessment, CrmEvent, Draft, Lead, Message, Run, Task, now_iso
 from app.governance import store
@@ -94,7 +95,7 @@ def anonymise(lead: Lead, why: str) -> None:
 
 
 def _scrub_mock_crm(lead_id: str) -> None:
-    conn = sqlite3.connect(config.DB_PATH, timeout=10)
+    conn = sqlstore.connect(config.DB_PATH, timeout=10)
     try:
         conn.execute("CREATE TABLE IF NOT EXISTS crm_received (id TEXT PRIMARY KEY, lead_id TEXT, envelope TEXT NOT NULL, entry TEXT NOT NULL)")
         conn.execute("UPDATE crm_received SET envelope = ?, entry = ? WHERE lead_id = ?",

@@ -8,6 +8,7 @@ from typing import Any, Optional, Type, TypeVar
 
 from pydantic import BaseModel
 
+from app import sqlstore
 from app.config import DB_PATH
 
 T = TypeVar("T", bound=BaseModel)
@@ -27,7 +28,7 @@ def conn() -> sqlite3.Connection:
     with _lock:
         if _conn is None:
             DB_PATH.parent.mkdir(parents=True, exist_ok=True)
-            _conn = sqlite3.connect(DB_PATH, check_same_thread=False)
+            _conn = sqlstore.connect(DB_PATH, check_same_thread=False)
             for k in KINDS:
                 _conn.execute(
                     f"CREATE TABLE IF NOT EXISTS {k} (id TEXT PRIMARY KEY, lead_id TEXT, "

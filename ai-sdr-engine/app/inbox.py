@@ -15,6 +15,7 @@ from typing import Any, Awaitable, Callable
 
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 
+from app import sqlstore
 from app.contracts import ReplyInput
 
 HEADER_ALLOWLIST = {"message-id", "in-reply-to", "references", "x-sdr-thread", "auto-submitted", "precedence", "reply-to"}
@@ -124,7 +125,7 @@ class InboxStore:
     @contextmanager
     def transaction(self):
         self.path.parent.mkdir(parents=True, exist_ok=True)
-        conn = sqlite3.connect(str(self.path), timeout=30)
+        conn = sqlstore.connect(str(self.path), timeout=30)
         conn.row_factory = sqlite3.Row
         try:
             conn.execute("BEGIN IMMEDIATE")

@@ -5,13 +5,14 @@ import json
 import sqlite3
 from contextlib import contextmanager
 
+from app import sqlstore
 from app import config
 
 
 # Open campaign request storage without adding fields to the shared workflow contracts.
 @contextmanager
 def connection():
-    conn = sqlite3.connect(config.DB_PATH, timeout=15)
+    conn = sqlstore.connect(config.DB_PATH, timeout=15)
     conn.row_factory = sqlite3.Row
     conn.execute('''CREATE TABLE IF NOT EXISTS workflow_requests (
         run_id TEXT PRIMARY KEY, payload TEXT NOT NULL, result TEXT)''')
