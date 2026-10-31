@@ -1,4 +1,5 @@
 from fastapi import APIRouter, Depends, File, Form, Header, Query, Response, UploadFile
+from fastapi.concurrency import run_in_threadpool
 from psycopg import Connection
 
 from .. import intake, pipeline
@@ -37,7 +38,8 @@ async def import_csv(file: UploadFile = File(...), source: str | None = Form(Non
     rows = intake.parse_csv(raw.decode("utf-8-sig"))
     if len(rows) > 100:
         raise intake.InvalidInput([f"{len(rows)} rows; limit is 100 per import"])
-    return intake.run_import(conn, rows, source, file.filename, autoRun)
+    # blocking DB work stays off the event loop, or a concurrent request waiting on our row locks would stall it
+    return await run_in_threadpool(intake.run_import, conn, rows, source, file.filename, autoRun)
 
 
 @router.get("/imports/{import_id}", response_model=ImportResult)

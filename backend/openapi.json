@@ -1256,6 +1256,239 @@
           }
         }
       }
+    },
+    "/v1/crm/events": {
+      "post": {
+        "tags": [
+          "crm"
+        ],
+        "summary": "Receive Event",
+        "description": "Signed webhook from ai-sdr-engine (set its CRM_WEBHOOK_URL to this path and share CRM_WEBHOOK_SECRET).\n\nThe engine delivers events concurrently, so the database work runs off the event loop, and it commits\nbefore we answer: a 200 means the event is durable and the engine may mark it delivered.",
+        "operationId": "receive_event_v1_crm_events_post",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/crm/resync": {
+      "post": {
+        "tags": [
+          "crm"
+        ],
+        "summary": "Resync",
+        "description": "Pull the engine's outbox and ingest anything missed (idempotent). Run it after the services wake up.",
+        "operationId": "resync_v1_crm_resync_post",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/crm/leads": {
+      "get": {
+        "tags": [
+          "crm"
+        ],
+        "summary": "Leads",
+        "operationId": "leads_v1_crm_leads_get",
+        "parameters": [
+          {
+            "name": "motion",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "enum": [
+                    "inbound",
+                    "outbound"
+                  ],
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Motion"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/crm/leads/{engine_lead_id}": {
+      "get": {
+        "tags": [
+          "crm"
+        ],
+        "summary": "Lead",
+        "operationId": "lead_v1_crm_leads__engine_lead_id__get",
+        "parameters": [
+          {
+            "name": "engine_lead_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Engine Lead Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/crm/opportunities": {
+      "get": {
+        "tags": [
+          "crm"
+        ],
+        "summary": "Opportunities",
+        "operationId": "opportunities_v1_crm_opportunities_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/crm/metrics": {
+      "get": {
+        "tags": [
+          "crm"
+        ],
+        "summary": "Metrics",
+        "operationId": "metrics_v1_crm_metrics_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/crm/routing": {
+      "get": {
+        "tags": [
+          "crm"
+        ],
+        "summary": "Routing",
+        "description": "Which AE should own this lead: existing account owner, then regional AE, then International.",
+        "operationId": "routing_v1_crm_routing_get",
+        "parameters": [
+          {
+            "name": "country",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Country"
+            }
+          },
+          {
+            "name": "email",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Email"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
     }
   },
   "components": {
