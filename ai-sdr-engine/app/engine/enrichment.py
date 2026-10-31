@@ -207,6 +207,26 @@ def enrich(inp: LeadInput) -> Enrichment:
     )
 
 
+async def enrich_for_lead(inp: LeadInput) -> Enrichment:
+    """Demo companies/people -> demo profile (never sent to live providers); real domains -> Apollo, then OpenAI web search."""
+    from app import config
+    profile = enrich(inp)
+    if profile.found:
+        return profile
+    if config.ENRICHMENT_PROVIDER == "apollo" and config.APOLLO_API_KEY:
+        from app.engine.apollo import enrich_apollo
+        apollo = await enrich_apollo(inp, api_key=config.APOLLO_API_KEY,
+            cache_path=config.DATA_DIR / "apollo-cache.sqlite3", people=config.APOLLO_PEOPLE_ENRICHMENT)
+        if apollo.found or any(e in apollo.errors for e in ("synthetic_domain", "company_domain_unavailable")):
+            return apollo if apollo.found else profile
+        from app.engine.public_research import enrich_public
+        public = await enrich_public(inp)
+        public.errors = list(dict.fromkeys(apollo.errors + public.errors))
+        return public
+    from app.engine.public_research import enrich_public
+    return await enrich_public(inp)
+
+
 # Expand a cohort role keyword into case-insensitive title substrings
 def _role_terms(role: str) -> tuple[str, ...]:
     r = role.strip().lower()
@@ -230,23 +250,41 @@ def search_cohort(cohort: CohortDefinition) -> list[LeadInput]:
     terms = [t for r in cohort.roles for t in _role_terms(r)]
     countries = _country_set(cohort.countries)
     inst_types = {i.strip().lower() for i in cohort.institutionTypes}
+    limit = max(0, min(cohort.limit, 100))
     out: list[LeadInput] = []
     seen: set[str] = set()
+
+    # Apply the role / market / institution filters to one candidate
+    def matches(title: str, country: Optional[str], institution: str) -> bool:
+        if terms and not any(t in title.lower() for t in terms):
+            return False
+        if countries and normalize_country(country) not in countries:
+            return False
+        return not inst_types or institution.lower() in inst_types
+
+    for email, person in _apollo()["people"].items():
+        if len(out) >= limit:
+            return out
+        company = lookup_company(person.get("companyDomain")) or {}
+        if email in seen or not matches(person.get("title") or "", company.get("country"), str(company.get("institutionType") or "")):
+            continue
+        seen.add(email)
+        out.append(LeadInput(
+            sourceRecordId=f"directory:{email}", source="target_account", fullName=person["fullName"], email=email,
+            companyName=company.get("name") or "", companyDomain=company.get("domain"), country=company.get("country") or "",
+            productId=cohort.productId, role=person.get("title"), phone=person.get("phone"),
+            institutionType=company.get("institutionType"), employeeCount=company.get("employeeCount"),
+            contactPermission=person.get("contactPermission") or "allowed",
+        ))
     for lead in db.list_("leads", Lead, limit=100000):
-        if len(out) >= max(0, min(cohort.limit, 100)):
+        if len(out) >= limit:
             break
         inp = lead.input
-        if inp.productId != cohort.productId or lead.normalizedEmail in seen:
+        if lead.normalizedEmail in seen:
             continue
-        title = (inp.role or "").lower()
-        if terms and not any(t in title for t in terms):
-            continue
-        if countries and normalize_country(inp.country) not in countries:
-            continue
-        company = lead.enrichment.company if lead.enrichment and not lead.enrichment.mock else {}
-        institution = str(inp.institutionType or company.get("institutionType") or "").lower()
-        if inst_types and institution not in inst_types:
+        company = (lead.enrichment.company if lead.enrichment else None) or {}
+        if not matches(inp.role or "", inp.country, str(inp.institutionType or company.get("institutionType") or "")):
             continue
         seen.add(lead.normalizedEmail)
-        out.append(inp.model_copy(update={"source": "target_account", "sourceRecordId": "workspace:" + lead.id}))
+        out.append(inp.model_copy(update={"source": "target_account", "sourceRecordId": "workspace:" + lead.id, "productId": cohort.productId}))
     return out

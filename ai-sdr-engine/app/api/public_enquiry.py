@@ -9,7 +9,7 @@ from typing import Literal, Optional
 from fastapi import APIRouter, Header
 from fastapi.responses import JSONResponse
 
-from app import config, pipeline
+from app import config, pipeline, enquiry_notifications
 from app.contracts import LeadInput, now_iso
 
 router = APIRouter(prefix="/public", tags=["enquiries"])
@@ -27,6 +27,7 @@ def receipts() -> sqlite3.Connection:
         request_key TEXT PRIMARY KEY, fingerprint TEXT NOT NULL, lead_id TEXT NOT NULL,
         privacy_accepted INTEGER NOT NULL, contact_permission TEXT NOT NULL,
         acknowledged_at TEXT NOT NULL, response TEXT NOT NULL)""")
+    enquiry_notifications.ensure_schema(conn)
     return conn
 
 
@@ -50,6 +51,7 @@ async def submit_enquiry(body: PublicEnquiry, idempotency_key: Optional[str] = H
         response["reference"] = "AZ-" + response["leadId"].removeprefix("lead_").upper()
         conn.execute("INSERT INTO public_enquiry_receipts VALUES(?,?,?,?,?,?,?)", (
             key, fingerprint, response["leadId"], 1, inp.contactPermission, now_iso(), json.dumps(response)))
+        enquiry_notifications.enqueue(conn, key, response['leadId'], inp, response['reference'])
         conn.commit()
         return JSONResponse(response, status_code=201)
     finally:

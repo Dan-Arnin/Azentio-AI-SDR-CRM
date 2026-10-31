@@ -67,7 +67,8 @@ def _seniority(lead: Lead) -> tuple[bool, Optional[str], str]:
     person = (lead.enrichment.person if lead.enrichment else {}) or {}
     seniority = str(person.get("seniority") or "").lower()
     title = person.get("title")
-    enrichment_origin = "mock_enrichment" if lead.enrichment and lead.enrichment.mock else "public_research"
+    enrichment_origin = ("mock_enrichment" if lead.enrichment and lead.enrichment.mock else
+                         "apollo" if lead.enrichment and lead.enrichment.provider == "apollo" else "public_research")
     if seniority in DECISION_MAKER_SENIORITY or (title and DECISION_MAKER_TITLE.search(title)):
         return True, f"{title or seniority} (seniority: {seniority or 'n/a'})", "form" if lead.input.role else enrichment_origin
     role = lead.input.role

@@ -167,13 +167,17 @@ def add_step(run: Run, name: str, status: str, detail: str, started: Optional[fl
 # Time a pipeline step; the body may set info["detail"]/info["status"]; failures are recorded then re-raised
 @contextmanager
 def step(run: Run, name: str) -> Iterator[dict[str, Any]]:
+    from app.llm import calllog
     started = time.perf_counter()
     info: dict[str, Any] = {"detail": "", "status": "ok"}
+    token = calllog.bind(run.leadId, name)
     try:
         yield info
     except Exception as exc:
         add_step(run, name, "failed", f"{type(exc).__name__}: operation_failed", started)
         raise
+    finally:
+        calllog.unbind(token)
     add_step(run, name, info["status"], info["detail"], started)
 
 
@@ -345,6 +349,7 @@ def resolve_identity(inp: LeadInput, idem_key: Optional[str], run: Run) -> tuple
 
     if ident.match == "conflict":
         lead = create_lead(inp, idem_key, ident.accountKey, stage="QUARANTINED")
+        lead.ownerId = config.DEFAULT_SDR_OWNER
         lead.flags.append("identity_conflict")
         save_lead(lead, "quarantined", "; ".join(ident.reasons) or "identity conflict")
         upsert_task(lead, "identity_review", config.DEFAULT_SDR_OWNER,
@@ -355,6 +360,7 @@ def resolve_identity(inp: LeadInput, idem_key: Optional[str], run: Run) -> tuple
     lead = create_lead(inp, idem_key, ident.accountKey)
     lead.accountOwnerId = ident.accountOwner
     lead.ownerId = config.DEFAULT_SDR_OWNER
+    save_lead(lead, "assigned", f"assigned to {lead.ownerId}" + (f"; account owner {lead.accountOwnerId}" if lead.accountOwnerId else ""), material=False)
     if suppressed_reason := is_suppressed(lead.normalizedEmail):
         lead.suppressed, lead.suppressionReason = True, f"suppression list: {suppressed_reason}"
         lead.stage = "SUPPRESSED"
@@ -423,20 +429,22 @@ def _fail_lead(lead_id: str, run: Run, exc: Exception) -> None:
 
 # Enrich + score a lead in place (shared by inbound and campaign paths)
 async def enrich_and_score(lead: Lead, run: Run) -> Lead:
-    from app.engine.enrichment import enrich
-    from app.engine.public_research import enrich_public
+    from app.engine.enrichment import enrich_for_lead
     from app.engine.icp import score_icp
 
     with step(run, "enrich") as info:
-        profile = enrich(lead.input)
-        if profile.found:
-            lead.enrichment = profile
+        lead.enrichment = await enrich_for_lead(lead.input)
+        if lead.enrichment.provider == "apollo":
+            info["detail"] = ("Enriched from the live Apollo API" if lead.enrichment.found
+                              else "Apollo skipped this synthetic or invalid company domain; no live facts added")
+        elif lead.enrichment.mock:
             info["detail"] = "Matched the company in the company profile database"
         else:
-            lead.enrichment = await enrich_public(lead.input)
             sources = len((lead.enrichment.company or {}).get("sources") or [])
             info["detail"] = (f"Researched the company's own website with OpenAI web search: {sources} quoted source(s)"
                               if lead.enrichment.found else "Web research found no verifiable public facts")
+        if lead.enrichment.errors:
+            info["detail"] += "; lookup notices: " + ", ".join(lead.enrichment.errors)
         enr = lead.enrichment
     save_lead(lead, "enriched", info["detail"])
     if lead.stage == "NEW":
