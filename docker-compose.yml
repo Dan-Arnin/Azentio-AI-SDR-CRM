@@ -13,7 +13,7 @@ services:
       retries: 30
 
   api:
-    build: ./backend
+    build: { context: ., dockerfile: backend/Dockerfile }
     environment:
       DATABASE_URL: postgresql://sdr:sdr@postgres:5432/sdr
     ports: ["8000:8000"]

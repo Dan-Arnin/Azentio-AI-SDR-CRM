@@ -14,6 +14,8 @@ All data is synthetic (`.example` domains). Every send is **simulated**. No real
 | `backend/app/engine/` | Enrichment, ICP scoring, reply intent + BANT, routing policy | **C** (decision engine) |
 | `backend/app/engagement/`, `backend/app/sequences.py` | Email drafts, follow-ups, outbound sequences | **D** (engagement) |
 | `fixtures/` | Mock Apollo data, sample leads CSV, scripted replies with expected routes | everyone |
+| `ai-sdr-engine/` | Decision + engagement engine with its own contact form and sales workspace (SQLite, OpenAI, Resend). See its `docs/` | engine team (PR 1) |
+| `render.yaml` | Free-tier deployment for the backend and the engine (see [Deploy](#deploy-free-tier-render--neon)) | **B** |
 | `reference/python-prototype/` | Earlier working prototype (FastAPI + SQLite + Claude) with its demo UI: shows the intended behaviour | read-only |
 
 C and D plug in behind fixed interfaces, so they can replace the fixture logic without touching routes:
@@ -45,6 +47,27 @@ Tests are end-to-end against a **disposable** Postgres, because they drop and re
 docker run -d --rm --name sdr-test-pg -e POSTGRES_USER=sdr -e POSTGRES_PASSWORD=sdr -e POSTGRES_DB=sdr_test -p 5433:5432 postgres:16
 cd backend && TEST_DATABASE_URL=postgresql://sdr:sdr@localhost:5433/sdr_test python -m pytest -q
 ```
+
+## Deploy (free tier: Render + Neon)
+
+[`render.yaml`](render.yaml) defines two free Render web services. Both redeploy on every push to the branch they were created from (normally `main`).
+
+| Service | What | Needs |
+|---|---|---|
+| `azentio-sdr-backend` | `backend/` in Docker. Applies migrations and seed on each start (safe to repeat) | `DATABASE_URL` from Neon |
+| `azentio-sdr-engine` | `ai-sdr-engine/`: contact form `/contact`, workspace `/workspace`, API `/v1` | `OPENAI_API_KEY` (optional: fixture mode without it) |
+
+1. **Neon:** create a project in **AWS Asia Pacific (Singapore)**, the same region as the Render services → Connection details → turn **off** "Connection pooling" → copy the `postgresql://…?sslmode=require` string.
+2. **Render:** Dashboard → New → Blueprint → select this repo and branch. Paste `DATABASE_URL` (and `OPENAI_API_KEY` if used) when asked. Secrets are entered only in Render, never committed.
+3. **Check:** `https://<backend>.onrender.com/ready` lists the applied migrations; `https://<engine>.onrender.com/health` returns `ok`.
+4. **Frontend (later):** deploy `frontend/` on Vercel, then add its URL to `CORS_ORIGIN` on the backend service.
+
+Free-tier behaviour to plan around:
+- Services sleep after 15 minutes idle; the first request takes 30–60 s. Open both `/health` URLs a few minutes before presenting.
+- The engine stores data in SQLite on Render's temporary disk, so its records reset on every redeploy or restart. Re-run the demo flow after deploying. The backend's data lives in Neon and persists.
+- Leave `EMAIL_TRANSPORT=simulated` unless sends are restricted to the controlled `DEMO_INBOX`.
+
+Test the backend image locally exactly as Render runs it: `docker build -f backend/Dockerfile .` (build from the repo root).
 
 ## Working together (Git)
 
