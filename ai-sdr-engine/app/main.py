@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import asyncio
+import logging
 from contextlib import asynccontextmanager
 from pathlib import Path
 from typing import Any, AsyncIterator
@@ -11,7 +12,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse, RedirectResponse, Response
 from fastapi.staticfiles import StaticFiles
 
-from app import config, db, jobs, pipeline, reply_routes
+from app import config, db, jobs, pipeline, reply_routes, seed_import
 from app.inbox import InboxStore
 from app.inbox_resend import ResendInboxPoller
 from app.enquiry_notifications import NotificationWorker
@@ -47,6 +48,10 @@ suppression or close. Every change is pushed to the CRM as a signed webhook and 
 @asynccontextmanager
 async def lifespan(application: FastAPI) -> AsyncIterator[None]:
     outbox.bind_loop(asyncio.get_running_loop())
+    try:  # demo snapshot into an empty workspace (ENGINE_SEED_FILE); never blocks startup
+        seed_import.import_if_empty()
+    except Exception:  # noqa: BLE001
+        logging.getLogger("uvicorn.error").exception("seed import failed; starting without demo data")
     db.conn()
     runner = jobs.configure(pipeline.execute_job)
     application.state.job_runner = runner

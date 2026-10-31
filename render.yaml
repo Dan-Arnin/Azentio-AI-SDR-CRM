@@ -57,6 +57,8 @@ services:
           property: connectionString
       - key: ENGINE_DB_SCHEMA
         value: engine
+      - key: ENGINE_SEED_FILE # demo snapshot loaded once into an empty workspace (never over existing leads)
+        value: seed-data/sdr-demo.sqlite3
       - key: OPENAI_API_KEY # optional: without it the engine runs in fixture mode and routes more leads to human review
         sync: false
       - key: LLM_BACKEND
