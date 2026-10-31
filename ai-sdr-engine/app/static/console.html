@@ -26,6 +26,7 @@ button, input, select, textarea { font: inherit; color: inherit; }
 button { cursor: pointer; }
 a { color: inherit; }
 :focus-visible { outline: 2px solid var(--ink); outline-offset: 2px; border-radius: 6px; }
+#main:focus, #main:focus-visible { outline: none; }
 [hidden] { display: none !important; }
 .sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
 .skip { position: absolute; left: 12px; top: -40px; background: var(--ink); color: #fff; padding: 8px 14px; border-radius: 8px; z-index: 100; }
@@ -314,7 +315,7 @@ table.list tr.click:hover td { background: var(--paper); }
 .dtabs button { border: 0; background: none; padding: 10px 14px; font-weight: 500; color: var(--muted); border-bottom: 2px solid transparent; }
 .dtabs button[aria-selected="true"] { color: var(--ink); border-bottom-color: var(--ink); }
 .owner-wrap { display: grid; gap: 4px; justify-items: end; }
-.owner-select { height: 34px; padding: 0 10px; font-size: 12.5px; min-width: 210px; border-radius: 999px; }
+select.field.owner-select { height: 38px; padding: 0 34px 0 14px; line-height: 38px; font-size: 13px; min-width: 250px; border-radius: 999px; }
 .trace { list-style: none; margin: 0; padding: 8px 20px 20px; position: relative; }
 .trace::before { content: ""; position: absolute; left: 35px; top: 18px; bottom: 28px; width: 2px; background: var(--line); }
 .trace-item { display: grid; grid-template-columns: 32px 1fr; gap: 14px; padding: 12px 0; position: relative; }
@@ -326,6 +327,46 @@ table.list tr.click:hover td { background: var(--paper); }
 .trace-src { background: var(--paper); border-radius: 8px; padding: 10px 12px; }
 .trace-src .quote { margin-top: 0; }
 .trace-src a { color: var(--blue-ink); }
+.ai-summary { display: flex; gap: 14px; align-items: center; flex-wrap: wrap; padding: 10px 20px 0; font-size: 12.5px; color: var(--ink-2); }
+.ai-calls { display: grid; gap: 4px; margin-top: 8px; }
+.ai-call { display: flex; gap: 8px; align-items: center; font-size: 12px; background: var(--mint-soft); color: var(--mint-ink); border-radius: 6px; padding: 5px 9px; }
+.ai-call .muted { color: #2f6b55; } .ai-call.fail { background: var(--red-soft); color: var(--red-ink); }
+
+/* Home */
+.home { max-width: 1180px; margin: 0 auto; }
+.home-hero { display: flex; gap: 16px; align-items: center; margin: 12px 0 20px; }
+.home-hero .spark { width: 52px; height: 52px; border-radius: 50%; background: var(--mint-soft); color: var(--mint-ink); display: grid; place-items: center; border: 1px solid #b8f5dc; }
+.ask { padding: 16px 18px; border: 1.5px solid #9eeccb; box-shadow: 0 0 0 4px rgb(85 255 190 / .12), var(--shadow); }
+.ask-input { width: 100%; border: 0; outline: 0; resize: none; font-size: 15px; background: transparent; }
+.ask-bar { display: flex; align-items: center; gap: 10px; margin-top: 6px; }
+.chat { display: grid; gap: 12px; margin-top: 14px; }
+.qa { padding: 16px 20px; }
+.qa .q { display: flex; gap: 8px; align-items: center; font-weight: 600; margin-bottom: 8px; }
+.answer p { margin: 0 0 8px; } .answer ul { margin: 0 0 8px; padding-left: 20px; } .answer li { margin: 4px 0; }
+.lead-link { color: var(--blue-ink); font-weight: 500; }
+.sugg { padding: 18px 20px; margin-top: 14px; } .sugg h3 { display: flex; align-items: center; gap: 8px; margin-bottom: 12px; }
+.sugg-list { display: flex; flex-wrap: wrap; gap: 8px; }
+.sugg-btn { display: inline-flex; align-items: center; gap: 8px; border: 1px solid var(--line-strong); background: #fff; border-radius: 10px; padding: 8px 12px; font-size: 13px; }
+.sugg-btn:hover { border-color: var(--ink); background: #f7fbfa; }
+.day-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 14px; align-items: stretch; }
+.day-grid > .card, .kgrid > .card, .opp-grid > .card, .queue > .card { margin-top: 0; }
+.day-text { min-width: 0; display: grid; gap: 1px; text-align: left; }
+.day-text b { font-size: 13.5px; }
+.day-co { font-size: 12px; color: var(--muted); }
+.day-sub { font-size: 12px; color: var(--ink-2); }
+.day .card-head h3 { display: flex; align-items: center; gap: 6px; }
+.day-list { padding: 10px 12px 14px; display: grid; gap: 4px; }
+.day-item { display: grid; grid-template-columns: 32px minmax(0, 1fr) auto; gap: 12px; align-items: center; padding: 10px 8px; border: 0; background: none; border-radius: 8px; width: 100%; }
+.day-item:hover { background: var(--paper); }
+.av.sm { width: 30px; height: 30px; font-size: 11px; }
+.ellipsis { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.kgrid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 14px; margin-bottom: 30px; }
+.ktile { padding: 18px; } .ktile .k { font-size: 12.5px; color: var(--muted); } .ktile .v { font-size: 30px; font-weight: 600; margin-top: 6px; font-variant-numeric: tabular-nums; }
+.ktile .d { font-size: 12px; color: var(--muted); margin-top: 4px; } .ktile .d.up { color: var(--mint-ink); } .ktile .d.down { color: var(--red-ink); }
+.who-chip { width: 24px; height: 24px; border-radius: 50%; background: var(--ink); color: var(--mint); font-size: 10px; font-weight: 600; display: grid; place-items: center; }
+button.avatar-me { border: 0; cursor: pointer; }
+@media (max-width: 1100px) { .day-grid, .kgrid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+@media (max-width: 640px) { .day-grid, .kgrid { grid-template-columns: 1fr; } }
 
 /* Modal + toast */
 .scrim { position: fixed; inset: 0; background: rgb(10 24 31 / .48); display: none; align-items: flex-start; justify-content: center; padding: 6vh 16px; z-index: 80; overflow-y: auto; }
@@ -385,6 +426,7 @@ table.list tr.click:hover td { background: var(--paper); }
       <span class="brand-name">Sales Workspace</span>
     </a>
     <nav class="nav" aria-label="Workspace">
+      <a href="#/home" data-view="home"><span data-icon="home"></span><span class="lbl">Home</span></a>
       <a href="#/leads" data-view="leads"><span data-icon="users"></span><span class="lbl">Leads</span></a>
       <a href="#/approvals" data-view="approvals"><span data-icon="mail"></span><span class="lbl">Approvals</span> <span class="count" id="c-approvals" hidden></span></a>
       <a href="#/opportunities" data-view="opportunities"><span data-icon="target"></span><span class="lbl">Opportunities</span> <span class="count hot" id="c-opps" hidden></span></a>
@@ -403,7 +445,10 @@ table.list tr.click:hover td { background: var(--paper); }
           <button type="button" role="menuitem" data-act="reset"><span data-icon="reset"></span><span>Start a fresh workspace<small>Clears leads, emails and campaigns.</small></span></button>
         </div>
       </div>
-      <div class="avatar-me" title="Sales Operations" aria-label="Signed in as Sales Operations">SO</div>
+      <div class="menu-wrap">
+        <button class="avatar-me" id="btn-me" type="button" aria-haspopup="true" aria-expanded="false" aria-label="Switch user">NK</button>
+        <div class="menu" id="menu-me" role="menu"><div class="menu-note">Viewing the workspace as</div></div>
+      </div>
     </div>
   </div>
 </header>
@@ -451,6 +496,9 @@ const REPLIES = [
 
 // ---------- Icons (Lucide, stroke) ----------
 const ICONS = {
+  home: [["path", "m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"], ["polyline", "9 22 9 12 15 12 15 22"]],
+  mic: [["path", "M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z"], ["path", "M19 10v2a7 7 0 0 1-14 0v-2"], ["path", "M12 19v3"]],
+  message: [["path", "M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"]],
   users: [["path", "M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"], ["circle", 9, 7, 4], ["path", "M22 21v-2a4 4 0 0 0-3-3.87"], ["path", "M16 3.13a4 4 0 0 1 0 7.75"]],
   mail: [["rect", 2, 4, 20, 16, 2], ["path", "m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7"]],
   target: [["circle", 12, 12, 10], ["circle", 12, 12, 6], ["circle", 12, 12, 2]],
@@ -521,7 +569,7 @@ const fitBadge = (fit, score) => fit ? h("span", { class: "fit " + fit }, fit + 
 const fmtDate = iso => { if (!iso) return ""; const d = new Date(iso); return d.toLocaleString("en-GB", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" }); };
 const fmtDay = iso => iso ? new Date(iso).toLocaleDateString("en-GB", { weekday: "short", day: "numeric", month: "short", year: "numeric" }) : "";
 const ago = iso => { const s = (Date.now() - new Date(iso)) / 1000; if (s < 0 || isNaN(s)) return fmtDate(iso); if (s < 60) return "just now"; if (s < 3600) return Math.floor(s / 60) + " min ago"; if (s < 86400) return Math.floor(s / 3600) + " h ago"; return fmtDate(iso); };
-const SCRUB = [[/^(?:SDR|AE|Owner|Close|Nurture|Suppressed):\s*/, ""], [/gap-fill/gi, "follow-up"], [/\bBANT\b/g, "buying signals"], [/\bICP\b/g, "target profile"], [/\(awaiting approval\)/gi, "(drafted for your approval)"], [/\s*\((?:[a-z]+-)*v\d+\)/gi, ""], [/\(\d\.\d\d confidence\)/g, ""], [/\b(gpt-[\w.-]+|openai[_\w]*|decisions? (?:api|provider)|fixture(?: mode)?|mock[_ ]?apollo|mock[_ ]enrichment|apollo|synthetic|api[_ ]key)\b/gi, ""], [/\s{2,}/g, " "]];
+const SCRUB = [[/^(?:SDR|AE|Owner|Close|Nurture|Suppressed):\s*/, ""], [/gap-fill/gi, "follow-up"], [/\bBANT\b/g, "buying signals"], [/\bICP\b/g, "target profile"], [/\(awaiting approval\)/gi, "(drafted for your approval)"], [/\s*\((?:[a-z]+-)*v\d+\)/gi, ""], [/\(\d\.\d\d confidence\)/g, ""], [/\b(gpt-[\w.-]+|openai[_\w]*|decisions? (?:api|provider)|api[_ ]key)\b/gi, ""], [/\s{2,}/g, " "]];
 // Remove any internal/system tokens from server-provided text before display
 const clean = t => { const out = SCRUB.reduce((s, [re, r]) => s.replace(re, r), String(t || "")).trim(); return out.charAt(0).toUpperCase() + out.slice(1); };
 function hydrateIcons(root = document) { root.querySelectorAll("[data-icon]").forEach(el => { if (!el.firstChild) el.replaceWith(icon(el.dataset.icon)); }); }
@@ -541,7 +589,7 @@ async function api(path, opts = {}) {
 const errText = e => ERRORS[e && e.code] || (e && e.code === "validation" ? "Please check the highlighted details and try again." : "Something went wrong. Please try again.");
 
 // ---------- State ----------
-const S = { detailTab: "overview", trace: [], apFilter: "all", srcFilter: "", railMode: "agent", campaigns: [], campByLead: {}, campByEnr: {}, view: "leads", leadId: null, leads: [], drafts: [], alerts: [], tasks: [], detail: null, filter: "all", q: "", activity: [], edits: {}, campaigns: [], dash: null, clock: null, tpl: "aml", lastCampaign: null, inbox: null };
+const S = { me: localStorage.getItem("sdr.me") || "sdr.omar", kpiDays: 14, home: null, chat: [], asking: false, detailTab: "overview", trace: [], apFilter: "all", srcFilter: "", railMode: "agent", campaigns: [], campByLead: {}, campByEnr: {}, view: "leads", leadId: null, leads: [], drafts: [], alerts: [], tasks: [], detail: null, filter: "all", q: "", activity: [], edits: {}, campaigns: [], dash: null, clock: null, tpl: "aml", lastCampaign: null, inbox: null };
 
 // ---------- Toasts ----------
 function toast(msg, kind = "ok") {
@@ -570,7 +618,7 @@ async function loadCore() {
 }
 async function loadDetail() {
   if (!S.leadId) return;
-  try { const [d, t] = await Promise.all([api("/v1/leads/" + S.leadId), api("/v1/leads/" + S.leadId + "/agent-trace").catch(() => ({ events: [] }))]); S.detail = d; S.trace = t.events || []; }
+  try { const [d, t] = await Promise.all([api("/v1/leads/" + S.leadId), api("/v1/leads/" + S.leadId + "/agent-trace").catch(() => ({ events: [] }))]); S.detail = d; S.trace = t.events || []; S.traceSummary = t.summary || {}; }
   catch (e) { S.detail = null; S.trace = []; }
 }
 let refreshTimer = null;
@@ -584,6 +632,7 @@ async function refresh(force) {
     }
     if (S.view === "campaigns") S.campaigns = (await api("/v1/campaigns")).items || [];
     if (S.view === "insights") S.dash = await api("/v1/dashboard");
+    if (S.view === "home") S.home = await api("/v1/home?userId=" + encodeURIComponent(S.me) + "&days=" + S.kpiDays);
   } catch (e) { return; }
   const typing = document.activeElement && document.activeElement.closest && document.activeElement.closest("#main") && /INPUT|TEXTAREA|SELECT/.test(document.activeElement.tagName);
   if (typing && !force) { scheduleRefresh(2500); return; }
@@ -598,7 +647,7 @@ function route() {
   const [, view = "leads", id] = path.split("/");
   if (view === "approvals") S.apFilter = params.get("c") || "all";
   if (view === "leads" && params.get("c")) S.srcFilter = "c:" + params.get("c");
-  S.view = ["leads", "approvals", "opportunities", "campaigns", "insights"].includes(view) ? view : "leads";
+  S.view = ["home", "leads", "approvals", "opportunities", "campaigns", "insights"].includes(view) ? view : "home";
   S.leadId = S.view === "leads" ? (id || S.leadId) : S.leadId;
   document.querySelectorAll(".nav a").forEach(a => a.setAttribute("aria-current", a.dataset.view === S.view ? "page" : "false"));
   refresh(true).then(() => $("#main").focus({ preventScroll: true }));
@@ -608,8 +657,92 @@ const openLead = id => { location.hash = "#/leads/" + id; };
 // ---------- Render root ----------
 function render() {
   const main = $("#main"); const keep = window.scrollY;
-  main.replaceChildren(({ leads: viewLeads, approvals: viewApprovals, opportunities: viewOpps, campaigns: viewCampaigns, insights: viewInsights })[S.view]());
+  main.replaceChildren(({ home: viewHome, leads: viewLeads, approvals: viewApprovals, opportunities: viewOpps, campaigns: viewCampaigns, insights: viewInsights })[S.view]());
   window.scrollTo(0, keep);
+}
+
+// ---------- Home ----------
+const SUGGESTIONS = ["What should I focus on today?", "Which high-fit leads haven't replied yet?", "What are the top 5 opportunities?", "Which emails are waiting for my approval?", "How are we doing this week vs last week?", "Summarise the AI in AML campaign"];
+// Ask the workspace assistant and append the answer to the conversation
+async function askAssistant(q) {
+  q = (q || "").trim(); if (!q || S.asking) return;
+  S.chat.push({ q, a: null }); S.asking = true; render();
+  try { const r = await api("/v1/assistant/ask", { method: "POST", body: { question: q, userId: S.me } }); S.chat[S.chat.length - 1].a = r; }
+  catch (e) { S.chat[S.chat.length - 1].a = { answer: "I couldn't answer that just now. Please try again.", leads: [] }; }
+  S.asking = false; render();
+  const last = document.querySelector(".qa:last-of-type"); last && last.scrollIntoView({ behavior: "smooth", block: "nearest" });
+}
+// Render an assistant answer: "- " lines become a list, lead names become links
+function answerNode(r) {
+  const links = Object.fromEntries((r.leads || []).map(x => [x.name, x.leadId]));
+  const names = Object.keys(links).sort((a, b) => b.length - a.length);
+  const linkify = text => { if (!names.length) return [text]; const re = new RegExp("(" + names.map(n => n.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")).join("|") + ")", "g");
+    return text.split(re).map(part => links[part] ? h("a", { href: "#/leads/" + links[part], class: "lead-link" }, part) : part); };
+  const out = []; let list = null;
+  for (const line of String(r.answer || "").split("\n")) {
+    const t = line.trim(); if (!t) { list = null; continue; }
+    const clean_ = t.replace(/\*\*/g, "");
+    if (/^[-•*]\s+/.test(clean_)) { if (!list) { list = h("ul"); out.push(list); } list.append(h("li", null, linkify(clean_.replace(/^[-•*]\s+/, "")))); }
+    else { list = null; out.push(h("p", null, linkify(clean_))); }
+  }
+  return h("div", { class: "answer" }, out);
+}
+// KPI tile with change vs previous period
+function kpiTile(label, cur, prev, fmt, sub, goodUp = true) {
+  const has = cur != null; const delta = has && prev != null ? cur - prev : null;
+  const up = delta > 0, tone = delta == null || delta === 0 ? "" : (up === goodUp ? "up" : "down");
+  return h("div", { class: "card ktile" }, h("div", { class: "k" }, label), h("div", { class: "v" }, has ? fmt(cur) : "–"),
+    h("div", { class: "d " + tone }, delta == null || !prev && !cur ? (sub || "no earlier data") : (delta === 0 ? "no change" : (up ? "▲ " : "▼ ") + fmt(Math.abs(delta)) + " vs prev."), sub && delta != null && (prev || cur) ? h("span", { class: "muted" }, " · " + sub) : null));
+}
+// One "your day" column
+function dayCard(title, ic, items, render_, empty) {
+  return h("section", { class: "card day" }, h("div", { class: "card-head" }, h("h3", null, icon(ic, "sm"), " ", title), h("span", { class: "count" + (items.length ? " hot" : "") }, items.length)),
+    h("div", { class: "day-list" }, items.length ? items.slice(0, 6).map(render_) : h("p", { class: "muted small", style: "margin:4px 0" }, empty)));
+}
+function viewHome() {
+  const H = S.home; const me = person(S.me);
+  const today = S.clock ? new Date(S.clock).toLocaleDateString("en-GB", { weekday: "long", day: "numeric", month: "long" }) : "";
+  if (!H) return h("div", { class: "home" }, h("div", { class: "skel", style: "height:220px;margin-top:40px" }));
+  const D = H.myDay; const todo = D.tasks.length + D.approvals.length + D.replies.length + D.dueToday.length;
+  const input = h("textarea", { class: "ask-input", rows: 2, placeholder: "Ask about your leads, replies, campaigns, tasks or team performance…", "aria-label": "Ask the workspace assistant",
+    onkeydown: e => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); askAssistant(input.value); } } });
+  const row = (lead, sub, extra) => h("button", { type: "button", class: "day-item", onclick: () => openLead(lead.leadId) }, h("span", { class: "av sm" }, initials(lead.name)),
+    h("span", { class: "day-text" }, h("b", { class: "ellipsis" }, lead.name || "Lead"), h("span", { class: "day-co ellipsis" }, lead.company || ""), h("span", { class: "day-sub ellipsis" }, sub)), extra || null);
+  const k = H.kpis.current, pv = H.kpis.previous;
+  const pct = v => v + "%", num = v => String(v), sec = v => v < 60 ? v + "s" : Math.round(v / 60) + "m";
+  return h("div", { class: "home" },
+    h("div", { class: "home-hero" }, h("span", { class: "spark" }, icon("sparkle")), h("div", null, h("h1", null, "Welcome back, " + first(me[0])),
+      h("p", { class: "muted", style: "margin:4px 0 0" }, today + " · " + (todo ? todo + " thing" + (todo > 1 ? "s" : "") + " need" + (todo > 1 ? "" : "s") + " you today" : "You're all caught up")))),
+    h("div", { class: "ask card" }, input, h("div", { class: "ask-bar" }, h("span", { class: "muted small" }, "Answers come only from your workspace data."), h("span", { style: "flex:1" }),
+      h("button", { class: "btn sm", type: "button", disabled: S.asking, onclick: () => askAssistant(input.value) }, S.asking ? h("span", { class: "spin" }) : icon("arrow", "sm"), S.asking ? "Thinking…" : "Ask"))),
+    S.chat.length ? h("div", { class: "chat" }, S.chat.map(c => h("div", { class: "qa card" }, h("div", { class: "q" }, icon("message", "sm"), c.q), c.a ? answerNode(c.a) : h("div", { class: "answer" }, h("div", { class: "skel", style: "height:14px;width:60%" }), h("div", { class: "skel", style: "height:14px;width:80%;margin-top:8px" }))))) : null,
+    h("div", { class: "card sugg" }, h("h3", null, icon("sparkle", "sm"), " What would you like to know?"), h("div", { class: "sugg-list" }, SUGGESTIONS.map(q => h("button", { type: "button", class: "sugg-btn", onclick: () => askAssistant(q) }, icon("message", "sm"), q)))),
+    h("div", { class: "section-title" }, h("h2", null, "Your day"), h("span", { class: "muted small" }, D.myLeads + " leads assigned to " + first(me[0]))),
+    h("div", { class: "day-grid" },
+      dayCard("Tasks", "check", D.tasks, t => row(t, clean(t.nextAction || t.title)), "No open tasks."),
+      dayCard("Emails to approve", "mail", D.approvals, a => row(a, (KIND[a.kind] || "Email") + ": " + a.subject), "Nothing waiting for approval."),
+      dayCard("New replies", "reply", D.replies, r => row(r, "“" + r.excerpt + "”"), "No new replies."),
+      dayCard("Waiting on a reply", "clock", D.awaitingReply, l => row(l, "High fit · emailed, no reply yet"), "Nobody high-fit is waiting.")),
+    h("div", { class: "section-title", style: "justify-content:space-between" }, h("div", null, h("h2", null, "Pipeline at a glance"), h("p", { class: "muted small", style: "margin:2px 0 0" }, "Lead generation, engagement and qualification for the AI SDR programme.")),
+      h("div", { class: "segs" }, [7, 14, 30].map(d => h("button", { type: "button", class: "seg", "aria-pressed": String(S.kpiDays === d), onclick: () => { S.kpiDays = d; refresh(true); } }, d + " days")))),
+    h("div", { class: "kgrid" },
+      kpiTile("New leads", k.newLeads, pv.newLeads, num),
+      kpiTile("Speed to lead", k.speedToLeadSec, pv.speedToLeadSec, sec, "median, to first draft", false),
+      kpiTile("Emails sent", k.emailsSent, pv.emailsSent, num),
+      kpiTile("Reply rate", k.replyRate, pv.replyRate, pct),
+      kpiTile("Positive replies", k.positiveReplies, pv.positiveReplies, pct, "of contacted leads"),
+      kpiTile("Qualified", k.qualified, pv.qualified, num, "all buying signals"),
+      kpiTile("Opportunities", k.opportunities, pv.opportunities, num, "accepted by AEs"),
+      kpiTile("Opt-outs", k.optOuts, pv.optOuts, num, "", false)));
+}
+// Populate the "viewing as" menu and wire it
+function setupMeMenu() {
+  const btn = $("#btn-me"), menu = $("#menu-me");
+  const paint = () => { btn.textContent = initials(person(S.me)[0]); btn.title = "Viewing as " + person(S.me)[0]; };
+  TEAM.forEach(([id, nm, role]) => menu.append(h("button", { type: "button", role: "menuitem", onclick: () => { S.me = id; localStorage.setItem("sdr.me", id); S.chat = []; paint(); menu.classList.remove("open"); refresh(true); } }, h("span", { class: "av sm" }, initials(nm)), h("span", null, nm, h("small", null, role)))));
+  btn.addEventListener("click", e => { e.stopPropagation(); const o = !menu.classList.contains("open"); menu.classList.toggle("open", o); btn.setAttribute("aria-expanded", String(o)); });
+  document.addEventListener("click", e => { if (!menu.contains(e.target) && e.target !== btn) menu.classList.remove("open"); });
+  paint();
 }
 
 // ---------- Leads view ----------
@@ -653,7 +786,7 @@ function leadRows() {
       h("span", { class: "av" }, initials(l.fullName)),
       h("span", { style: "min-width:0" }, h("div", { class: "name" }, l.fullName), h("div", { class: "co" }, l.companyName),
         h("div", { class: "meta" }, stageBadge(l.stage), h("span", { class: "muted small" }, sourceLabel(l)))),
-      h("span", { class: "right" }, fitBadge(l.fit), pend ? h("span", { class: "dot-alert", title: "Email awaiting approval", "aria-label": "Email awaiting approval" }) : null));
+      h("span", { class: "right" }, fitBadge(l.fit), l.ownerId && h("span", { class: "who-chip", title: "Assignee: " + person(l.ownerId)[0] }, initials(person(l.ownerId)[0])), pend ? h("span", { class: "dot-alert", title: "Email awaiting approval", "aria-label": "Email awaiting approval" }) : null));
   });
 }
 
@@ -691,7 +824,7 @@ function viewDetail() {
   const header = h("div", { class: "card profile" },
     h("span", { class: "av lg" }, initials(inp.fullName)),
     h("div", { class: "who" }, h("h2", null, inp.fullName), h("div", { class: "sub" }, [title, inp.companyName, COUNTRY[inp.country] || inp.country].filter(Boolean).join(" · ")),
-      h("div", { class: "chips" }, h("span", { class: "badge outline" }, icon("globe", "sm"), SOURCE[inp.source] || inp.source), h("span", { class: "badge outline" }, PRODUCT[inp.productId] || inp.productId), inp.eventName && h("span", { class: "badge outline" }, inp.eventName), inp.assetName && h("span", { class: "badge outline" }, inp.assetName))),
+      h("div", { class: "chips" }, h("span", { class: "badge outline" }, icon(S.campByLead[L.id] ? "megaphone" : "globe", "sm"), S.campByLead[L.id] ? "Campaign: " + S.campByLead[L.id].name : (SOURCE[inp.source] || inp.source)), h("span", { class: "badge outline" }, PRODUCT[inp.productId] || inp.productId), inp.eventName && h("span", { class: "badge outline" }, inp.eventName), inp.assetName && h("span", { class: "badge outline" }, inp.assetName))),
     h("div", { class: "owner" }, stageBadge(L.stage), fitBadge(L.icp && L.icp.fit, L.icp && L.icp.score), ownerPicker(L)));
   const next = h("div", { class: "next" + (ns.calm ? " calm" : "") }, h("span", { class: "ico" }, icon(ns.icon)), h("div", null, h("div", { class: "label" }, "Next step"), h("div", { class: "text" }, ns.text)),
     ns.jump && h("button", { type: "button", class: "btn mint sm next-cta", onclick: () => { const t = $(ns.jump); t && t.scrollIntoView({ behavior: "smooth", block: "start" }); } }, ns.label, icon("arrow", "sm")));
@@ -709,22 +842,29 @@ function viewDetail() {
 const TEAM = [["ae.sara", "Sara Malik", "Account Executive"], ["ae.khalid", "Khalid Al Mansoori", "Account Executive"], ["ae.priya", "Priya Raman", "Account Executive"], ["sdr.omar", "Nadia Karim", "Sales Development"]];
 // Owner dropdown: assign or change who owns this lead
 function ownerPicker(L) {
-  const sel = h("select", { class: "field owner-select", "aria-label": "Lead owner", onchange: e => { const v = e.target.value; if (!v) return; act(sel, () => api("/v1/leads/" + L.id + "/owner", { method: "POST", body: { ownerId: v } }), "Owner set to " + person(v)[0]); } },
-    h("option", { value: "", selected: !L.ownerId, disabled: true }, "Assign owner…"),
+  const sel = h("select", { class: "field owner-select", "aria-label": "Lead owner", onchange: e => { const v = e.target.value; if (!v) return; act(sel, () => api("/v1/leads/" + L.id + "/owner", { method: "POST", body: { ownerId: v } }), "Assigned to " + person(v)[0]); } },
+    h("option", { value: "", selected: !L.ownerId, disabled: true }, "Unassigned: choose…"),
     TEAM.map(([id, nm, role]) => h("option", { value: id, selected: L.ownerId === id }, nm + " · " + role)));
-  return h("label", { class: "owner-wrap" }, h("span", { class: "muted small" }, "Owner"), sel);
+  return h("div", { class: "owner-wrap" }, h("label", { class: "muted small" }, "Assignee"), sel,
+    L.accountOwnerId && L.accountOwnerId !== L.ownerId ? h("span", { class: "muted small" }, "Account owner: " + person(L.accountOwnerId)[0]) : null);
 }
-const AGENT_ICON = { "Research agent": "search", "Qualification agent": "sparkle", "Writing agent": "edit", "Fit scoring": "target", "CRM check": "building", "Compliance": "shield", "Routing": "usercheck", "Email": "send", "Inbox": "reply", "Campaigns": "megaphone", "Scheduler": "clock" };
+const AGENT_ICON = { "Research": "search", "Qualification": "sparkle", "Writing": "edit", "Fit scoring": "target", "CRM check": "building", "Compliance": "shield", "Routing": "usercheck", "Email": "send", "Inbox": "reply", "Campaigns": "megaphone", "Scheduler": "clock" };
 // Time-ordered view of everything the AI SDR agents did on this lead, with sources
 function agentTimeline(L) {
   const ev = S.trace || [];
   if (!ev.length) return h("div", { class: "card", style: "margin-top:16px" }, h("div", { class: "empty" }, h("div", { class: "ico" }, icon("sparkle")), h("h3", null, "No agent activity yet"), h("p", null, "Steps appear here as the AI SDR researches, qualifies and drafts.")));
-  return h("div", { class: "card", style: "margin-top:16px" }, h("div", { class: "card-head" }, h("h2", null, "How the AI SDR worked this lead"), h("span", { class: "muted small" }, ev.length + " steps")),
+  const sm = S.traceSummary || {};
+  const aiSteps = ev.filter(e => e.mode === "ai").length;
+  return h("div", { class: "card", style: "margin-top:16px" }, h("div", { class: "card-head" }, h("h2", null, "How the AI SDR worked this lead"), h("span", { class: "muted small" }, ev.length + " steps · " + aiSteps + " used AI")),
+    h("div", { class: "ai-summary" }, sm.aiCalls ? [h("span", { class: "badge mint" }, icon("sparkle", "sm"), sm.aiCalls + " AI call" + (sm.aiCalls > 1 ? "s" : "")), h("span", null, (sm.models || []).join(", ")), h("span", null, (sm.tokens || 0).toLocaleString() + " tokens"), h("span", null, sm.modelSeconds + "s model time"), sm.failedCalls ? h("span", { class: "badge red" }, sm.failedCalls + " failed") : null]
+      : h("span", { class: "muted small" }, "No AI calls recorded for this lead yet. Steps marked Rule are deterministic checks; AI runs for drafting, reading replies and web research.")),
     h("ol", { class: "trace" }, ev.map(e => h("li", { class: "trace-item" },
       h("span", { class: "trace-ico" }, icon(AGENT_ICON[e.agent] || "sparkle", "sm")),
       h("div", { class: "trace-body" },
-        h("div", { class: "trace-top" }, h("span", { class: "badge outline" }, e.agent), h("b", null, clean(e.title)), h("span", { class: "muted small" }, fmtDate(e.at) + (e.durationMs ? " · " + (e.durationMs / 1000).toFixed(1) + "s" : ""))),
+        h("div", { class: "trace-top" }, h("span", { class: "badge " + (e.mode === "ai" ? "mint" : "grey") }, e.mode === "ai" ? "AI" : e.mode === "system" ? "System" : e.mode === "lookup" ? "API lookup" : "Rule"), h("span", { class: "badge outline" }, e.agent), h("b", null, clean(e.title)), h("span", { class: "muted small" }, fmtDate(e.at) + (e.durationMs ? " · " + (e.durationMs / 1000).toFixed(1) + "s" : ""))),
         e.summary && h("p", { class: "small", style: "margin:6px 0 0" }, clean(e.summary)),
+        (e.aiCalls || []).length ? h("div", { class: "ai-calls" }, e.aiCalls.map(c => h("div", { class: "ai-call" + (c.ok ? "" : " fail") }, icon(c.ok ? "check" : "alert", "sm"),
+          h("span", null, c.purpose), h("span", { class: "muted" }, c.model + " · " + (c.provider || "").replace(/_/g, " ") + " · " + (c.durationMs / 1000).toFixed(1) + "s" + (c.tokens ? " · " + c.tokens.toLocaleString() + " tokens" : ""))))) : null,
         (e.details || []).length ? h("ul", { class: "trace-details" }, e.details.map(x => h("li", null, clean(x)))) : null,
         (e.sources || []).length ? h("div", { class: "trace-sources" }, e.sources.map(src => h("div", { class: "trace-src" },
           src.quote && h("blockquote", { class: "quote" }, "“" + src.quote + "”"),
@@ -814,7 +954,7 @@ function qualificationCard(L, asm) {
       h("div", { class: "bant" }, ["need", "timeline", "authority", "budget"].map(k => {
         const f = bant[k] || { status: "missing", evidence: [] }; const [lab, tone, ic] = BANT_STATUS[f.status] || BANT_STATUS.missing;
         const ev = (f.evidence || [])[0];
-        const from = ev && ({ buyer_statement: "In their reply", form: "From their enquiry", mock_enrichment: "From an example company profile", crm: "From the CRM", public_research: "From public sources" })[ev.origin];
+        const from = ev && ({ buyer_statement: "In their reply", form: "From their enquiry", mock_enrichment: "From an example company profile", crm: "From the CRM", public_research: "From public sources", apollo: "From Apollo" })[ev.origin];
         return h("div", { class: "bant-item" }, h("span", { class: "bant-ico " + f.status }, icon(ic, "sm")),
           h("div", null, h("div", { class: "top" }, h("span", { class: "lbl" }, BANT_LABEL[k]), h("span", { class: "badge " + tone }, lab)),
             ev && ev.excerpt ? h("blockquote", { class: "quote" }, "“" + ev.excerpt + "”", h("cite", null, from)) : h("div", { class: "muted small", style: "margin-top:4px" }, f.status === "missing" ? "Not mentioned yet" : clean(f.note))));
@@ -871,10 +1011,13 @@ function conversationSection(d) {
 }
 function profileCard(L, enr) {
   const co = enr.company || {}, pr = enr.person || {}, inp = L.input;
+  const sourceLabel = enr.provider === "apollo" ? (enr.found ? "Apollo - live enrichment" : "Apollo - no live profile used") : enr.mock ? "Demo profile - synthetic data" : "Public company research";
   const facts = [["Company", co.name || inp.companyName], ["Industry", co.industry], ["Institution type", INSTITUTION[co.institutionType || inp.institutionType]], ["Employees", (co.employeeCount || inp.employeeCount) && Number(co.employeeCount || inp.employeeCount).toLocaleString()], ["Headquarters", [co.hq, COUNTRY[co.country || inp.country]].filter(Boolean).join(", ")], ["Revenue", co.revenueBand], ["Contact", pr.title || inp.role], ["Department", pr.department], ["Email", inp.email], ["Phone", inp.phone || pr.phone]].filter(([, v]) => v);
   const conflicts = (enr.conflicts || []);
   return h("section", null, h("div", { class: "section-title" }, h("h2", null, "Company & contact")),
     h("div", { class: "card" }, h("div", { class: "card-body" },
+      h("p", { class: "muted small", style: "margin:0 0 12px" }, sourceLabel + (enr.fetchedAt ? " · " + fmtDate(enr.fetchedAt) : "")),
+      (enr.errors || []).length ? h("p", { class: "notice amber small" }, "Enrichment notice: " + enr.errors.join(", ").replace(/_/g, " ")) : null,
       h("div", { class: "facts" }, facts.map(([k, v]) => h("div", { class: "fact" }, h("div", { class: "k" }, k), h("div", { class: "v" }, v)))),
       conflicts.length ? h("div", { class: "notice amber", style: "margin:16px -20px -20px" }, icon("alert", "sm"), h("div", null, conflicts.map(c => h("div", null, "Their form says " + c.field + " is “" + c.form + "”; our company profile says “" + c.apollo + "”. We're using what they told us.")))) : null,
       (enr.missing || []).length ? h("p", { class: "muted small", style: "margin:14px 0 0" }, "Still unknown: " + enr.missing.join(", ").replace(/([A-Z])/g, " $1").toLowerCase()) : null)));
@@ -1149,11 +1292,12 @@ $("#btn-add").addEventListener("click", () => openAddLead("website"));
 $("#scrim").addEventListener("click", e => { if (e.target.id === "scrim") closeModal(); });
 document.addEventListener("keydown", e => { if (e.key === "Escape" && $("#scrim").classList.contains("open")) closeModal(); });
 setupDemoMenu();
+setupMeMenu();
 window.addEventListener("hashchange", route);
 api("/v1/demo/clock").then(c => { S.clock = c.now; }).catch(() => {});
 connectLive();
 setInterval(() => { if (!document.hidden) refresh(); }, 6000);
-if (!location.hash) location.hash = "#/leads"; else route();
+if (!location.hash) location.hash = "#/home"; else route();
 </script>
 </body>
 </html>

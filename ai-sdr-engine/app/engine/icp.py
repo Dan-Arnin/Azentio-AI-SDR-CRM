@@ -190,7 +190,7 @@ def score_icp(inp: LeadInput, enr: Enrichment) -> IcpResult:
     if not enr.mock:
         for check in checks:
             if check.origin == "mock_enrichment":
-                check.origin = "public_research"
+                check.origin = "apollo" if enr.provider == "apollo" else "public_research"
     score = max(0, min(100, sum(c.points for c in checks)))
     required = [c for c in checks if c.rule in REQUIRED_RULES]
     failed = [c for c in required if c.passed is False]
@@ -199,7 +199,7 @@ def score_icp(inp: LeadInput, enr: Enrichment) -> IcpResult:
     reasons: list[str] = []
     if enr.conflicts:
         status = "needs_review"
-        reasons.append("Supplied company details conflict with a cited public source; review before outreach.")
+        reasons.append("Supplied company details conflict with enrichment evidence; review before outreach.")
     elif not product_known:
         status = "needs_review"
         reasons.append("Product interest is unknown - a human should confirm which product fits before scoring.")

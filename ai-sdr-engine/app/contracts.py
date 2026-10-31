@@ -5,7 +5,7 @@ import uuid
 from datetime import datetime, timezone
 from typing import Any, Literal, Optional
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator
 
 Source = Literal["website", "webinar", "event", "ad", "marketing_csv", "target_account"]
 ProductId = Literal["lending_platform", "islamic_banking", "aml_compliance", "unknown"]
@@ -18,7 +18,7 @@ Stage = Literal[
 FitBand = Literal["High", "Medium", "Low"]
 IcpStatus = Literal["matches_icp", "outside_icp", "needs_info", "needs_review"]
 EvidenceStatus = Literal["confirmed", "inferred", "missing", "conflict"]
-EvidenceOrigin = Literal["buyer_statement", "form", "mock_enrichment", "public_research", "crm"]
+EvidenceOrigin = Literal["buyer_statement", "form", "mock_enrichment", "public_research", "apollo", "crm"]
 ReplyIntent = Literal[
     "interested", "not_now", "wrong_person", "referral",
     "unsubscribe", "out_of_office", "not_interested", "other",
@@ -56,7 +56,7 @@ class LeadInput(BaseModel):
     country: str
     productId: ProductId = "unknown"
     inquiry: str = ""
-    contactPermission: Permission = "unknown"
+    contactPermission: Permission = "allowed"
     phone: Optional[str] = None
     role: Optional[str] = None
     companyDomain: Optional[str] = None
@@ -66,6 +66,12 @@ class LeadInput(BaseModel):
     campaignId: Optional[str] = None
     assetName: Optional[str] = None
     submittedAt: Optional[str] = None
+
+    # Contact permission defaults to allowed; only an explicit "denied" blocks outreach
+    @field_validator("contactPermission", mode="before")
+    @classmethod
+    def _default_permission(cls, value: Any) -> str:
+        return "denied" if str(value or "").strip().lower() == "denied" else "allowed"
 
 
 class Evidence(BaseModel):
@@ -90,6 +96,7 @@ class Enrichment(BaseModel):
     uncertain: list[str] = Field(default_factory=list)
     conflicts: list[dict[str, Any]] = Field(default_factory=list)
     evidence: list[Evidence] = Field(default_factory=list)
+    errors: list[str] = Field(default_factory=list)
 
 
 class IcpCheck(BaseModel):
