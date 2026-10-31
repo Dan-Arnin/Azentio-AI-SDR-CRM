@@ -65,6 +65,7 @@ cd backend && TEST_DATABASE_URL=postgresql://sdr:sdr@localhost:5433/sdr_test pyt
 
 Free-tier behaviour to plan around:
 - Services sleep after 15 minutes idle; the first request takes 30–60 s. Open both `/health` URLs a few minutes before presenting.
+- **Demo data:** on first start with an empty workspace the engine loads `ai-sdr-engine/seed-data/sdr-demo.sqlite3` (42 leads, 4 campaigns; `ENGINE_SEED_FILE`), once. Afterwards run `POST /v1/crm/resync` on the backend so the CRM has the same history.
 - Both services keep their data in `azentio-sdr-db`: the backend in the `public` schema, the engine in the `engine` schema. Data survives deploys, restarts and sleep. Locally, without `ENGINE_DATABASE_URL`, the engine uses SQLite as before.
 - **The free Render database expires 30 days after it is created** (Render emails before deleting it). Upgrade it to a paid plan to keep it, or export the data first. It has 1 GB of storage and no backups on the free plan.
 - Leave `EMAIL_TRANSPORT=simulated` unless sends are restricted to the controlled `DEMO_INBOX`.
