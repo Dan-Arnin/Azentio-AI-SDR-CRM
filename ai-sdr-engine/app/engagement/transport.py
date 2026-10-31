@@ -45,6 +45,10 @@ def _existing_message(draft_id: str) -> Message | None:
 
 # Run every send gate; raise ValueError(code) on the first failure
 def check_send_gates(draft: Draft, lead: Lead) -> None:
+    if draft.kind == "linkedin_note":
+        raise ValueError("linkedin_manual_step")
+    if draft.kind == "sms_message":
+        raise ValueError("sms_uses_messaging_send")
     if lead.suppressed or lead.input.contactPermission != "allowed":
         raise ValueError("contact_blocked")
     if draft.enrollmentId:

@@ -72,13 +72,24 @@
   "themes": {
     "next_gen_lending": {
       "title": "Next-generation lending",
-      "aliases": ["next-gen lending", "next gen lending", "next-generation lending", "digital lending", "lending transformation", "lending platform", "loan origination", "smarter lending"],
+      "aliases": ["next-gen lending", "next gen lending", "next-generation lending", "next-generation lending platforms", "next generation lending platforms", "digital lending", "lending transformation", "lending platform", "loan origination", "smarter lending"],
       "products": ["lending_platform"],
       "sourceUrl": "https://www.azentio.com/banking/lending",
       "angles": [
         {"id": "thm-lend-01", "text": "Lenders are looking at how intelligent workflows and decisioning can speed up credit approvals.", "sourceUrl": "https://www.azentio.com/banking/lending"},
         {"id": "thm-lend-02", "text": "Lending teams want unified data and workflows across origination, loan management and collections.", "sourceUrl": "https://www.azentio.com/banking/lending"},
         {"id": "thm-lend-03", "text": "Institutions offering both conventional and Islamic finance want one lending platform that supports both.", "sourceUrl": "https://www.azentio.com/banking/lending"}
+      ]
+    },
+    "ai_credit_decisioning": {
+      "title": "AI-driven credit decisioning",
+      "aliases": ["ai-driven credit decisioning", "ai driven credit decisioning", "ai credit decisioning", "credit decisioning", "credit decisions", "credit risk", "credit risk decisioning", "automated credit decisioning", "decisioning engine"],
+      "products": ["lending_platform"],
+      "sourceUrl": "https://www.azentio.com/banking/lending",
+      "angles": [
+        {"id": "thm-cred-01", "text": "Credit teams are looking at how a robust decisioning engine with dynamic scoring can support real-time approvals.", "sourceUrl": "https://www.azentio.com/banking/lending"},
+        {"id": "thm-cred-02", "text": "Lenders are exploring how intelligent automation and scoring models can support quicker credit approvals while keeping policy adherence.", "sourceUrl": "https://www.azentio.com/banking/lending"},
+        {"id": "thm-cred-03", "text": "Risk leaders want real-time insights across origination, loan management and collections to inform credit decisions.", "sourceUrl": "https://www.azentio.com/banking/lending"}
       ]
     },
     "ai_in_aml": {

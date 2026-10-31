@@ -261,20 +261,27 @@ async def send(draft_id: str) -> Any:
 # Create an outbound campaign: cohort -> enrollments -> touch drafts awaiting approval
 @router.post("/campaigns", status_code=201, tags=["campaigns"])
 async def create_campaign(inp: CampaignInput) -> Any:
-    return await aguarded(pipeline.create_campaign(inp))
+    from app.api.campaign_channels import schedule_channel_drafts
+    result = await aguarded(pipeline.create_campaign(inp))
+    cid = result.get("id") or (result.get("campaign") or {}).get("id") if isinstance(result, dict) else None
+    if cid and any(ch != "email" for ch in inp.channels):
+        schedule_channel_drafts(cid, list(inp.channels))
+    return result
 
 
 # All campaigns with enrollment counts by state, newest first
 @router.get("/campaigns", tags=["campaigns"])
 def list_campaigns() -> dict[str, Any]:
     from app import db
+    from app.api.campaign_channels import campaign_channels, channel_stats
     from app.contracts import Campaign, Enrollment
 
     items = []
     for c in reversed(db.list_("campaigns", Campaign)):
         enrollments = [e for e in (db.get("enrollments", eid, Enrollment) for eid in c.enrollmentIds) if e]
         states = [e.state for e in enrollments]
-        items.append({**c.model_dump(mode="json"), "enrolled": len(states),
+        stats = channel_stats(c, enrollments)
+        items.append({**c.model_dump(mode="json"), "channels": campaign_channels(c, stats), "channelStats": stats, "enrolled": len(states),
                       "states": {s: states.count(s) for s in set(states)},
                       "leadIds": [e.leadId for e in enrollments]})
     return {"items": items}
