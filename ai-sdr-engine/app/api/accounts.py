@@ -295,15 +295,17 @@ def list_accounts() -> dict[str, Any]:
     records = {r.domain: r for r in dz.all_company_records() if r.domain}
     domains |= set(records)
     items = []
-    for d in sorted(domains - {x for x in domains if is_seller_domain(x)}):
+    domains |= {d.strip().lower() for d in config.env("SELLER_DOMAINS", "azentio.com").split(",") if d.strip()}
+    for d in sorted(domains):
         leads = by_domain.get(d, [])
         rec = records.get(d)
         open_opps = sum(1 for l in leads if l.stage in OPPORTUNITY_STAGES)
         open_opps += sum(1 for o in _crm()["opportunities"] if o["accountDomain"] == d and o.get("status", "open") == "open")
         researched = rec.data.get("researchedAt") if rec and rec.data.get("status") != "skipped_demo" else None
-        items.append({"domain": d, "name": _company_name(d, leads), "isDemoCompany": dz.is_demo_domain(d), "contacts": len(leads),
-                      "openOpportunities": open_opps, "researchedAt": researched})
-    items.sort(key=lambda i: (-i["contacts"], i["name"].lower()))
+        own = is_seller_domain(d)
+        items.append({"domain": d, "name": "Azentio" if own and d == "azentio.com" else _company_name(d, leads), "isDemoCompany": dz.is_demo_domain(d),
+                      "isOwnCompany": own, "contacts": len(leads), "openOpportunities": 0 if own else open_opps, "researchedAt": researched})
+    items.sort(key=lambda i: (not i["isOwnCompany"], -i["contacts"], i["name"].lower()))
     return {"items": items}
 
 

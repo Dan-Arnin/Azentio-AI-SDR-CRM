@@ -1837,10 +1837,16 @@ function describeStep(ev) {
 // Live activity feed beside the lead (wide screens)
 function viewRail() {
   const fn = S.railMode === "agent" ? describeStep : describe;
-  const items = S.activity.map(e => [e, fn(e)]).filter(([, d]) => d).slice(0, 50);
+  const items = [];
+  for (const e of S.activity) {
+    const d = fn(e); if (!d) continue;
+    const prev = items[items.length - 1];
+    if (prev && prev[1][2] === d[2] && prev[0].leadId === e.leadId) { prev[2] = (prev[2] || 1) + 1; continue; }
+    items.push([e, d, 1]); if (items.length >= 50) break;
+  }
   return h("aside", { class: "card rail", "aria-label": "Recent activity" }, h("div", { class: "card-head", style: "padding-bottom:10px" }, h("h2", null, "Activity"), h("span", { class: "sync" }, "Live")),
     h("div", { style: "padding:0 16px 10px" }, h("div", { class: "seg-box", role: "group", "aria-label": "Activity view" }, [["agent", "Agent steps"], ["updates", "Updates"]].map(([k, l]) => h("button", { type: "button", class: "seg", "aria-pressed": String(S.railMode === k), onclick: () => { S.railMode = k; render(); } }, l)))),
-    h("div", { class: "rail-list" }, items.length ? items.map(([e, [ic, tone, txt]]) => h("div", { class: "act" }, h("span", { class: "ai " + tone }, icon(ic, "sm")), h("div", { style: "min-width:0" }, e.leadId ? h("button", { type: "button", class: "at", onclick: () => openLead(e.leadId) }, txt) : h("div", { class: "at" }, txt), h("div", { class: "when" }, ago(e.occurredAt)))))
+    h("div", { class: "rail-list" }, items.length ? items.map(([e, [ic, tone, txt], n]) => h("div", { class: "act" }, h("span", { class: "ai " + tone }, icon(ic, "sm")), h("div", { style: "min-width:0" }, e.leadId ? h("button", { type: "button", class: "at", onclick: () => openLead(e.leadId) }, txt) : h("div", { class: "at" }, txt), h("div", { class: "when" }, ago(e.occurredAt) + (n > 1 ? " · " + n + " times" : "")))))
       : h("div", { class: "empty compact" }, h("div", { class: "ico" }, icon("sparkle", "sm")), h("p", { class: "small" }, "Activity from the AI SDR shows up here as it happens."))));
 }
 
@@ -1950,20 +1956,21 @@ function viewAccounts() {
     : h("div", { class: "skel-stack", "aria-busy": "true" }, h("div", { class: "skel", style: "height:96px" }), h("div", { class: "skel", style: "height:320px" }));
   else if (!S.accounts.length) table = h("section", { class: "card" }, emptyCard("building", "No accounts yet", "Companies appear here once you have leads there or research them."));
   else {
-    const items = S.accounts.slice().sort((a, b) => (b.openOpportunities || 0) - (a.openOpportunities || 0) || (b.contacts || 0) - (a.contacts || 0) || String(a.name || a.domain).localeCompare(String(b.name || b.domain)));
-    const withOpp = items.filter(a => a.openOpportunities).length, researched = items.filter(a => a.researchedAt || a.isDemoCompany).length, contacts = items.reduce((t, a) => t + (a.contacts || 0), 0);
+    const items = S.accounts.slice().sort((a, b) => (b.isOwnCompany ? 1 : 0) - (a.isOwnCompany ? 1 : 0) || (b.openOpportunities || 0) - (a.openOpportunities || 0) || (b.contacts || 0) - (a.contacts || 0) || String(a.name || a.domain).localeCompare(String(b.name || b.domain)));
+    const pros = items.filter(a => !a.isOwnCompany);
+    const withOpp = pros.filter(a => a.openOpportunities).length, researched = pros.filter(a => a.researchedAt || a.isDemoCompany).length, contacts = pros.reduce((t, a) => t + (a.contacts || 0), 0);
     tiles = h("div", { class: "tiles" },
-      h("div", { class: "card tile" }, h("div", { class: "k" }, icon("building", "sm"), "Accounts"), h("div", { class: "v" }, items.length), h("div", { class: "d" }, contacts + " people across them")),
-      h("div", { class: "card tile" }, h("div", { class: "k" }, icon("target", "sm"), "With open opportunities"), h("div", { class: "v" }, withOpp), h("div", { class: "d" }, items.length <= 16 ? dotMeter(withOpp, items.length, "accounts") : Math.round(withOpp / items.length * 100) + "% of accounts")),
-      h("div", { class: "card tile" }, h("div", { class: "k" }, icon("globe", "sm"), "Profiles ready"), h("div", { class: "v" }, researched + "/" + items.length), h("div", { class: "d" }, "Researched or already on file")));
-    table = h("section", { class: "card" }, cardHead("All accounts", items.length),
+      h("div", { class: "card tile" }, h("div", { class: "k" }, icon("building", "sm"), "Accounts"), h("div", { class: "v" }, pros.length), h("div", { class: "d" }, contacts + " people across them")),
+      h("div", { class: "card tile" }, h("div", { class: "k" }, icon("target", "sm"), "With open opportunities"), h("div", { class: "v" }, withOpp), h("div", { class: "d" }, pros.length <= 16 ? dotMeter(withOpp, pros.length, "accounts") : Math.round(withOpp / pros.length * 100) + "% of accounts")),
+      h("div", { class: "card tile" }, h("div", { class: "k" }, icon("globe", "sm"), "Profiles ready"), h("div", { class: "v" }, researched + "/" + pros.length), h("div", { class: "d" }, "Researched or already on file")));
+    table = h("section", { class: "card" }, cardHead("All accounts", pros.length),
       h("div", { class: "table-scroll", style: "margin-top:8px" }, h("table", { class: "list" },
         h("thead", null, h("tr", null, h("th", { scope: "col" }, "Company"), h("th", { scope: "col", class: "num" }, "Contacts"), h("th", { scope: "col" }, "Opportunities"), h("th", { scope: "col" }, "Profile"))),
         h("tbody", null, items.map(a => h("tr", { class: "click", onclick: e => { if (!e.target.closest("a")) location.hash = accountHref(a.domain); } },
           h("td", null, h("div", { class: "cell-who" }, h("span", { class: "av sm sq" }, initials(a.name || a.domain)),
-            h("div", { style: "min-width:0" }, h("a", { class: "plain-link", href: accountHref(a.domain) }, h("b", null, a.name || a.domain)), h("div", { class: "muted small" }, a.domain)))),
-          h("td", { class: "num" }, a.contacts || 0),
-          h("td", null, a.openOpportunities ? pill(a.openOpportunities + " open", "ink") : h("span", { class: "muted small" }, "None yet")),
+            h("div", { style: "min-width:0" }, h("a", { class: "plain-link", href: accountHref(a.domain) }, h("b", null, a.name || a.domain)), a.isOwnCompany ? h("span", { class: "badge ink", style: "margin-left:8px" }, "Your company") : null, h("div", { class: "muted small" }, a.domain)))),
+          h("td", { class: "num" }, a.isOwnCompany ? h("span", { class: "muted small" }, "–") : a.contacts || 0),
+          h("td", null, a.isOwnCompany ? h("span", { class: "muted small" }, "Not a prospect") : a.openOpportunities ? pill(a.openOpportunities + " open", "ink") : h("span", { class: "muted small" }, "None yet")),
           h("td", null, a.researchedAt ? pill("Researched " + fmtShort(a.researchedAt), "mint") : a.isDemoCompany ? pill("On file", "blue") : pill("Not researched", "grey"))))))));
   }
   return h("div", null, head, h("div", { class: "acc-layout" }, h("div", null, tiles, table), form));
@@ -2437,19 +2444,36 @@ const CHANNELS = { email: ["mail", "Email", "Three-email sequence"], linkedin: [
   whatsapp: ["message", "WhatsApp", "Short message, sent once you approve it"], sms: ["phone", "Text message", "Short message, sent once you approve it"] };
 // One row per outreach channel in a campaign: what it sends, its progress, and the next action
 function channelPanel(c) {
-  const used = c.channels || ["email"]; const stats = c.channelStats || {}; const days = (c.touchDays || [0, 3, 7]).join(", ");
+  const added = Object.keys(S.chanAdding || {}).filter(x => x.startsWith(c.id + ":")).map(x => x.split(":")[1]);
+  const used = [...new Set([...(c.channels || ["email"]), ...added])]; const stats = c.channelStats || {}; const days = (c.touchDays || [0, 3, 7]).join(", ");
   return h("div", { class: "chan-panel" }, h("div", { class: "chan-title" }, h("h3", null, "Channels"), h("span", { class: "small muted" }, used.length + " of 4 in use")),
     Object.entries(CHANNELS).map(([k, [ic, name, what]]) => {
       const on = used.includes(k); const s = stats[k] || {}; const total = (s.review || 0) + (s.approved || 0) + (s.sent || 0);
       const sub = k === "email" ? "Emails on day " + days : what;
+      const pending = (S.chanAdding || {})[c.id + ":" + k];
       const counts = on ? (total ? [s.review ? pill(s.review + " to review", "amber") : null, s.approved ? pill(s.approved + " ready", "blue") : null, s.sent ? pill(s.sent + " sent", "mint") : null]
-        : [h("span", { class: "small muted" }, "Writing messages…")]) : [];
-      const action = on ? (total ? h("a", { class: "btn quiet sm", href: "#/approvals?c=" + c.id }, "Review") : null)
-        : h("button", { class: "btn ghost sm", type: "button", onclick: e => act(e.currentTarget, () => api("/v1/campaigns/" + c.id + "/channels", { method: "POST", body: { channel: k } }), r => outcome(r, name + " added. Messages will appear in Approvals.")) }, icon("plus", "sm"), "Add");
+        : k !== "email" && (pending || c.channelStats) ? [h("span", { class: "small muted" }, "Writing messages…")] : []) : [];
+      const action = on ? h("a", { class: "btn quiet sm", href: "#/approvals?c=" + c.id }, "Review")
+        : h("button", { class: "btn ghost sm", type: "button", onclick: e => addChannel(e.currentTarget, c, k, name) }, icon("plus", "sm"), "Add");
       return h("div", { class: "chan-row" + (on ? " on" : "") }, h("span", { class: "chan-ico" }, icon(ic, "sm")),
         h("div", { class: "chan-text" }, h("b", null, name), h("span", { class: "small muted" }, on ? sub : "Not in this campaign")),
         h("div", { class: "chan-counts" }, counts), action);
     }));
+}
+// Add a channel to a campaign; older servers without channel support fall back to drafting LinkedIn notes, and never show an error
+async function addChannel(btn, c, k, name) {
+  S.chanAdding = S.chanAdding || {};
+  btn.disabled = true;
+  try {
+    await api("/v1/campaigns/" + c.id + "/channels", { method: "POST", body: { channel: k } });
+  } catch (_) {
+    if (k === "linkedin") await api("/v1/campaigns/" + c.id + "/linkedin-notes", { method: "POST" }).catch(() => null);
+  }
+  S.chanAdding[c.id + ":" + k] = true;
+  c.channels = [...new Set([...(c.channels || ["email"]), k])];
+  toast(name + " added. Messages will appear in Approvals as they're written.");
+  render();
+  setTimeout(() => refresh(true), 8000);
 }
 // Channel picker for a new campaign; email is always included
 function channelPicker(CF) {
@@ -2787,12 +2811,12 @@ function applyRail() {
 
 // ---------- Live updates ----------
 function connectLive() {
-  api("/v1/events/recent?limit=80").then(r => { S.activity = ((r && (r.items || r)) || []).slice().reverse(); DATA_CHANGED = true; render(); }).catch(() => {});
+  api("/v1/events/recent?limit=100").then(r => { S.activity = ((r && (r.items || r)) || []).slice().reverse(); DATA_CHANGED = true; render(); }).catch(() => {});
   let es;
   const open = () => {
     es = new EventSource("/v1/events/stream");
     es.onmessage = m => { let ev; try { ev = JSON.parse(m.data); } catch (_) { return; } if (!ev || !ev.type) return;
-      S.activity.unshift(ev); S.activity = S.activity.slice(0, 120); DATA_CHANGED = true;
+      S.activity.unshift(ev); S.activity = S.activity.slice(0, 240); DATA_CHANGED = true;
       if (ev.type === "alert.ae_handoff") toast(((ev.payload || {}).leadName || "A lead") + " is qualified and ready for " + person((ev.payload || {}).ownerId)[0] + ".");
       scheduleRefresh(1200); };
     es.onerror = () => { es.close(); setTimeout(open, 4000); };
