@@ -100,7 +100,8 @@ app.mount("/assets", StaticFiles(directory=STATIC_DIR / "assets"), name="assets"
 # Serve a static HTML page if it exists, else fall back to the API docs
 def page(name: str) -> Response:
     path = STATIC_DIR / name
-    return FileResponse(path) if path.exists() else RedirectResponse("/docs")
+    # no-cache: browsers revalidate (cheap 304) so a deploy is visible on the next load, not a cached old page
+    return FileResponse(path, headers={"Cache-Control": "no-cache"}) if path.exists() else RedirectResponse("/docs")
 
 
 # Live demo console
