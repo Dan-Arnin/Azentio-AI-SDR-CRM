@@ -26,7 +26,7 @@ One shared demo password from `CONSOLE_PASSWORD` (Render generates it). Sessions
 | Data rights & retention (C6, C7) | Export and erase requests; anonymised leads; retention setting and the daily run |
 | Audit (S1) | `gov_audit`, append-only: SQLite triggers refuse UPDATE and DELETE, and the code has no edit or delete path |
 
-Governance tables (`gov_audit`, `gov_flags`, `gov_requests`, `gov_settings`) are not touched by "Start a fresh workspace". Each audit event is also sent through the CRM outbox (`audit.recorded`), so the hosted backend keeps a durable copy in Neon even though the engine's disk is temporary on Render's free tier.
+Governance tables (`gov_audit`, `gov_flags`, `gov_requests`, `gov_settings`) are not touched by "Start a fresh workspace". Each audit event is also sent through the CRM outbox (`audit.recorded`), so the CRM backend keeps a second copy of the audit trail in its own tables.
 
 ## New controls in the engine
 

@@ -1,4 +1,4 @@
-# app/sqlstore.py - One storage entry point: SQLite locally, PostgreSQL (e.g. Neon) when ENGINE_DATABASE_URL is set.
+# app/sqlstore.py - One storage entry point: SQLite locally, PostgreSQL (e.g. Render Postgres) when ENGINE_DATABASE_URL is set.
 #
 # Modules keep their sqlite3-style code (?-placeholders, `with conn:` commits, sqlite3.Row access, BEGIN IMMEDIATE,
 # INSERT OR IGNORE/REPLACE, PRAGMA table_info, rowid ordering). On PostgreSQL this adapter translates those few
@@ -145,7 +145,7 @@ _pool: "queue.LifoQueue[tuple[Any, float]]" = queue.LifoQueue(maxsize=8)
 _ensured: set[str] = set()
 _meta: dict[str, tuple[list[str], list[str]]] = {}
 _lock = threading.Lock()
-MAX_IDLE_SECONDS = 240  # Neon closes idle connections when compute suspends
+MAX_IDLE_SECONDS = 240  # hosted databases drop long-idle connections (e.g. on restart or suspend)
 
 
 def _schema() -> str:

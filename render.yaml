@@ -1,18 +1,31 @@
-# Render Blueprint: Dashboard → New → Blueprint → pick this repo. Both services use the free plan.
+# Render Blueprint: Dashboard → New → Blueprint → pick this repo. Everything uses the free plan.
 # Values marked sync: false are secrets: Render asks for them on first deploy; they never live in git.
+
+# One Render Postgres database for both services: the backend uses the public schema, the engine the "engine" schema.
+# Free Render Postgres expires 30 days after it is created unless upgraded; see README "Deploy".
+databases:
+  - name: azentio-sdr-db
+    plan: free
+    region: singapore # same region as the services, so they connect over Render's private network
+    databaseName: sdr
+    user: sdr
+    ipAllowList: [] # no connections from the internet; only services in this Render account can connect
+
 services:
   # CRM backend (FastAPI + PostgreSQL). Applies db/migrations and db/seed on every start (idempotent).
   - type: web
     name: azentio-sdr-backend
     runtime: docker
     plan: free
-    region: singapore # keep in the same region as the Neon database
+    region: singapore # same region as the database
     dockerfilePath: ./backend/Dockerfile
     dockerContext: .
     healthCheckPath: /health
     envVars:
-      - key: DATABASE_URL # Neon "direct" connection string, ending in ?sslmode=require
-        sync: false
+      - key: DATABASE_URL # filled in by Render from the database above (internal connection string)
+        fromDatabase:
+          name: azentio-sdr-db
+          property: connectionString
       - key: CORS_ORIGIN # comma-separated; add the Vercel URL once the frontend is live
         value: http://localhost:3000
       - key: DECISION_PROVIDER
@@ -24,13 +37,13 @@ services:
       - key: ENGINE_URL # engine base URL, e.g. https://azentio-sdr-engine.onrender.com (used by POST /v1/crm/resync)
         sync: false
 
-  # AI SDR engine (contact form, sales workspace, /v1 workflow API). Stores its data in Neon (schema "engine"),
+  # AI SDR engine (contact form, sales workspace, /v1 workflow API). Stores its data in the Render database (schema "engine"),
   # so leads, drafts and campaigns survive deploys, restarts and sleep. Without ENGINE_DATABASE_URL it falls back to SQLite.
   - type: web
     name: azentio-sdr-engine
     runtime: python
     plan: free
-    region: singapore # keep in the same region as the Neon database
+    region: singapore # same region as the database
     rootDir: ai-sdr-engine
     buildCommand: pip install uv && uv sync --frozen
     startCommand: uv run --frozen uvicorn app.main:app --host 0.0.0.0 --port $PORT
@@ -38,11 +51,10 @@ services:
     envVars:
       - key: PYTHON_VERSION
         value: 3.12.7
-      - key: ENGINE_DATABASE_URL # same Neon database as the backend; engine tables live in their own schema
-        fromService:
-          type: web
-          name: azentio-sdr-backend
-          envVarKey: DATABASE_URL
+      - key: ENGINE_DATABASE_URL # same database as the backend; engine tables live in their own schema
+        fromDatabase:
+          name: azentio-sdr-db
+          property: connectionString
       - key: ENGINE_DB_SCHEMA
         value: engine
       - key: OPENAI_API_KEY # optional: without it the engine runs in fixture mode and routes more leads to human review
