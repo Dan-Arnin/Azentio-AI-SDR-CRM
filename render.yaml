@@ -19,6 +19,10 @@ services:
         value: fixture
       - key: EMAIL_TRANSPORT
         value: simulated
+      - key: CRM_WEBHOOK_SECRET # signs engine → CRM webhooks; Render generates it and shares it with the engine
+        generateValue: true
+      - key: ENGINE_URL # engine base URL, e.g. https://azentio-sdr-engine.onrender.com (used by POST /v1/crm/resync)
+        sync: false
 
   # AI SDR engine (contact form, sales workspace, /v1 workflow API). Keeps its own SQLite file.
   - type: web
@@ -41,3 +45,10 @@ services:
         value: simulated
       - key: DEMO_MODE
         value: "true"
+      - key: CRM_WEBHOOK_URL # backend URL + /v1/crm/events, e.g. https://azentio-sdr-backend.onrender.com/v1/crm/events
+        sync: false
+      - key: CRM_WEBHOOK_SECRET
+        fromService:
+          type: web
+          name: azentio-sdr-backend
+          envVarKey: CRM_WEBHOOK_SECRET
