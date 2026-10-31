@@ -19,6 +19,13 @@ from app.api.inbox import router as inbox_router
 from app.api.routes import router as api_router
 from app.api.workspace import router as workspace_router
 from app.api.assistant import router as assistant_router
+from app.api.performance import router as performance_router
+from app.api.simulate import router as simulate_router
+from app.api.linkedin import router as linkedin_router
+from app.api.messaging import router as messaging_router
+from app.api.accounts import router as accounts_router
+from app.api.styles import router as styles_router
+from app.api.campaign_channels import router as campaign_channels_router
 from app.api.public_enquiry import router as public_enquiry_router
 from app.crm import outbox
 from app.crm.mock_crm import router as mock_crm_router
@@ -73,6 +80,13 @@ app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_methods=["*"], all
 app.include_router(api_router)
 app.include_router(workspace_router)
 app.include_router(assistant_router)
+app.include_router(performance_router)
+app.include_router(simulate_router)
+app.include_router(linkedin_router)
+app.include_router(messaging_router)
+app.include_router(accounts_router)
+app.include_router(styles_router)
+app.include_router(campaign_channels_router)
 app.include_router(public_enquiry_router)
 app.include_router(inbox_router)
 app.include_router(mock_crm_router)
@@ -109,6 +123,12 @@ def console() -> Response:
 @app.get("/contact", include_in_schema=False)
 def contact() -> Response:
     return page("contact.html")
+
+
+# Public trust center: security, compliance, AI safeguards and subprocessors
+@app.get("/trust", include_in_schema=False)
+def trust() -> Response:
+    return page("trust.html")
 
 
 # Liveness probe plus the demo clock (no internal configuration exposed)

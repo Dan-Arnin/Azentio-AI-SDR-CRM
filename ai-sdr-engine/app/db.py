@@ -14,7 +14,7 @@ T = TypeVar("T", bound=BaseModel)
 
 KINDS = (
     "leads", "assessments", "drafts", "messages", "campaigns",
-    "enrollments", "tasks", "crm_events", "runs", "suppressions", "ai_calls",
+    "enrollments", "tasks", "crm_events", "runs", "suppressions", "ai_calls", "dossiers", "styles",
 )
 
 _lock = threading.RLock()

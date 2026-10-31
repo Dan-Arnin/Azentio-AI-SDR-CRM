@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import json
+import re
 from functools import lru_cache
 from typing import Any, Optional
 
@@ -27,12 +28,27 @@ COUNTRY_ALIASES = {
     "FRANCE": "FR", "UK": "GB", "UNITED KINGDOM": "GB", "USA": "US", "UNITED STATES": "US",
 }
 
-ROLE_ALIASES = {
-    "ceo": ("ceo", "chief executive"),
-    "chief executive": ("ceo", "chief executive"),
-    "cto": ("cto", "chief technology"),
-    "cfo": ("cfo", "chief financial"),
-    "coo": ("coo", "chief operating"),
+ROLE_GROUPS = {
+    "ceo": ("ceo", "chief executive", "chief executive officer"),
+    "cto": ("cto", "chief technology", "chief technology officer"),
+    "cfo": ("cfo", "chief financial", "chief financial officer"),
+    "coo": ("coo", "chief operating", "chief operating officer"),
+    "compliance": ("head of compliance", "chief compliance officer", "compliance director", "director of compliance",
+                   "mlro", "money laundering reporting officer"),
+    "credit risk": ("head of credit risk", "chief risk officer", "head of credit", "head of risk",
+                    "credit risk director", "director of credit risk"),
+    "transformation": ("head of transformation", "chief transformation officer", "head of digital transformation",
+                       "transformation director", "director of transformation"),
+}
+ROLE_ALIASES: dict[str, tuple[str, ...]] = {
+    **{term: group for group in ROLE_GROUPS.values() for term in group},
+    **ROLE_GROUPS,
+    "risk": ROLE_GROUPS["credit risk"],
+    "digital transformation": ROLE_GROUPS["transformation"],
+}
+INDUSTRY_HINTS = {
+    "bank": "banking", "islamic_bank": "islamic banking", "nbfc": "nbfc non-banking finance",
+    "fintech": "fintech", "insurer": "insurance",
 }
 
 COMPANY_FACTS = ("name", "industry", "country", "institutionType", "employeeCount", "revenueBand", "hq")
@@ -227,10 +243,28 @@ async def enrich_for_lead(inp: LeadInput) -> Enrichment:
     return await enrich_public(inp)
 
 
-# Expand a cohort role keyword into case-insensitive title substrings
+# Expand a cohort role keyword into the keyword itself plus its equivalent titles
 def _role_terms(role: str) -> tuple[str, ...]:
     r = role.strip().lower()
-    return ROLE_ALIASES.get(r, (r,))
+    return tuple(dict.fromkeys((r, *ROLE_ALIASES.get(r, ()))))
+
+
+# Title contains a role term (short acronyms like CEO/MLRO must be whole words)
+def _title_has(title: str, term: str) -> bool:
+    if len(term) <= 4:
+        return re.search(rf"\b{re.escape(term)}\b", title) is not None
+    return term in title
+
+
+# Searchable industry text for a company: its industry plus a label derived from institution type
+def _industry_text(industry: Any, institution: Any) -> str:
+    parts = [str(industry or "").strip(), INDUSTRY_HINTS.get(str(institution or "").strip().lower(), "")]
+    return " ".join(p for p in parts if p).lower()
+
+
+# Case-insensitive substring match on industry text; "banking" does not match "non-banking"
+def _industry_has(industry: str, term: str) -> bool:
+    return bool(industry) and re.search(rf"(?<!non-)(?<!non ){re.escape(term)}", industry) is not None
 
 
 # Expand cohort country tokens (supports "GCC")
@@ -242,23 +276,26 @@ def _country_set(countries: list[str]) -> set[str]:
     return out
 
 
-# Find supplied workspace contacts; never fabricate net-new people from fixtures.
+# Find target contacts: mock-directory people first, then existing workspace leads (de-duplicated by email)
 def search_cohort(cohort: CohortDefinition) -> list[LeadInput]:
     from app import db
     from app.contracts import Lead
 
-    terms = [t for r in cohort.roles for t in _role_terms(r)]
+    terms = [t for r in cohort.roles if r.strip() for t in _role_terms(r)]
     countries = _country_set(cohort.countries)
-    inst_types = {i.strip().lower() for i in cohort.institutionTypes}
+    inst_types = {i.strip().lower() for i in cohort.institutionTypes if i.strip()}
+    industries = [i.strip().lower() for i in cohort.industries if i.strip()]
     limit = max(0, min(cohort.limit, 100))
     out: list[LeadInput] = []
     seen: set[str] = set()
 
-    # Apply the role / market / institution filters to one candidate
-    def matches(title: str, country: Optional[str], institution: str) -> bool:
-        if terms and not any(t in title.lower() for t in terms):
+    # Apply the role / market / institution / industry filters to one candidate
+    def matches(title: str, country: Optional[str], institution: str, industry: str) -> bool:
+        if terms and not any(_title_has(title.lower(), t) for t in terms):
             return False
         if countries and normalize_country(country) not in countries:
+            return False
+        if industries and not any(_industry_has(industry, i) for i in industries):
             return False
         return not inst_types or institution.lower() in inst_types
 
@@ -266,7 +303,9 @@ def search_cohort(cohort: CohortDefinition) -> list[LeadInput]:
         if len(out) >= limit:
             return out
         company = lookup_company(person.get("companyDomain")) or {}
-        if email in seen or not matches(person.get("title") or "", company.get("country"), str(company.get("institutionType") or "")):
+        institution = str(company.get("institutionType") or "")
+        industry = _industry_text(company.get("industry"), institution)
+        if email in seen or not matches(person.get("title") or "", company.get("country"), institution, industry):
             continue
         seen.add(email)
         out.append(LeadInput(
@@ -283,7 +322,9 @@ def search_cohort(cohort: CohortDefinition) -> list[LeadInput]:
         if lead.normalizedEmail in seen:
             continue
         company = (lead.enrichment.company if lead.enrichment else None) or {}
-        if not matches(inp.role or "", inp.country, str(inp.institutionType or company.get("institutionType") or "")):
+        institution = str(inp.institutionType or company.get("institutionType") or "")
+        industry = _industry_text(company.get("industry"), institution)
+        if not matches(inp.role or "", inp.country, institution, industry):
             continue
         seen.add(lead.normalizedEmail)
         out.append(inp.model_copy(update={"source": "target_account", "sourceRecordId": "workspace:" + lead.id, "productId": cohort.productId}))

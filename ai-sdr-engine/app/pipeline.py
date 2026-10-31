@@ -24,6 +24,18 @@ INBOUND_DRAFT_KIND: dict[str, Optional[DraftKind]] = {
     "marketing_csv": "qualifying_email",
     "target_account": None,
 }
+PEOPLE = {"ae.sara": "Sara Malik", "ae.khalid": "Khalid Al Mansoori", "ae.priya": "Priya Raman", "sdr.omar": "Nadia Karim"}
+GCC = frozenset({"AE", "SA", "BH", "QA", "KW", "OM"})
+# AE territory/product rules, first match wins: (countries or None = any, products or None = any, owner, reason)
+AE_TERRITORY_RULES: tuple[tuple[Optional[frozenset], Optional[frozenset], str, str], ...] = (
+    (GCC, frozenset({"islamic_banking"}), "ae.khalid", "covers Islamic banking in the GCC"),
+    (frozenset({"IN"}), None, "ae.priya", "covers India"),
+    (GCC, None, "ae.sara", "covers lending and AML/compliance in the GCC"),
+    (None, None, "ae.sara", "is the default AE for accounts outside a mapped territory"),
+)
+COUNTRY_ALIASES = {"UAE": "AE", "UNITED ARAB EMIRATES": "AE", "SAUDI ARABIA": "SA", "KSA": "SA", "BAHRAIN": "BH", "QATAR": "QA",
+                   "KUWAIT": "KW", "OMAN": "OM", "INDIA": "IN"}
+TIMELINE_EXCERPT_CHARS = 160
 REVIEW_STAGES = ("REP_REVIEW", "HUMAN_REVIEW")
 ACTIVE_CONVERSATION_STAGES = ("ENGAGING", "QUALIFYING", "REP_REVIEW", "HUMAN_REVIEW", "OPPORTUNITY")
 PENDING_DRAFT_STATUSES = ("DRAFT", "APPROVED")
@@ -225,14 +237,41 @@ def card_summary(lead: Lead, asm: Assessment, title: Optional[str]) -> str:
     conf = f" ({asm.intentConfidence:.0%} confidence)" if asm.intentConfidence is not None else ""
     confirmed = [k.capitalize() for k in BANT_KEYS if asm.bant.get(k) and asm.bant[k].status == "confirmed"]
     unresolved = [k.capitalize() for k in asm.missingFields] or ["none"]
-    first = f"{who} at {lead.input.companyName} is evaluating {product}; reply intent is {intent}{conf}."
+    strength = f", {asm.intentStrength} intent" if asm.replyIntent else ""
+    first = f"{who} at {lead.input.companyName} is evaluating {product}; reply intent is {intent}{conf}{strength}."
     second = f"BANT confirmed: {', '.join(confirmed) or 'none'}; unresolved: {', '.join(unresolved)}."
     third = f"Recommended next step: {asm.nextAction}." if asm.nextAction else ""
     return " ".join(s for s in (first, second, third) if s)
 
 
+# Display name for an owner id
+def person_name(owner_id: Optional[str]) -> str:
+    return PEOPLE.get(owner_id or "", owner_id or "unassigned")
+
+
+# Engagement history for the card: counts, first touch, last reply, campaign and the last 6 messages (in recorded order)
+def engagement_summary(lead: Lead) -> dict[str, Any]:
+    msgs = db.list_("messages", Message, lead_id=lead.id, limit=100000)
+    sent = [m for m in msgs if m.direction == "outbound"]
+    received = [m for m in msgs if m.direction == "inbound"]
+    campaign_name = None
+    for enr in db.find("enrollments", Enrollment, leadId=lead.id):
+        if campaign := db.get("campaigns", enr.campaignId, Campaign):
+            campaign_name = campaign.name
+    timeline = []
+    for m in msgs[-6:]:
+        text = " ".join((m.body.split("\n\nKind regards,")[0] if m.direction == "outbound" else m.body).split())
+        excerpt = text if len(text) <= TIMELINE_EXCERPT_CHARS else text[:TIMELINE_EXCERPT_CHARS - 1].rstrip() + "…"
+        timeline.append({"at": m.at, "direction": m.direction, "subject": m.subject, "excerpt": excerpt})
+    return {
+        "emailsSent": len(sent), "repliesReceived": len(received),
+        "firstTouchAt": sent[0].at if sent else None, "lastReplyAt": received[-1].at if received else None,
+        "campaignName": campaign_name, "timeline": timeline,
+    }
+
+
 # Build the AE/SDR handoff card from lead, enrichment and assessment
-def build_card(lead: Lead, asm: Assessment, owner: str) -> HandoffCard:
+def build_card(lead: Lead, asm: Assessment, owner: str, routing_reason: str = "") -> HandoffCard:
     enr = lead.enrichment
     person = enr.person if enr else {}
     company = enr.company if enr else {}
@@ -259,6 +298,7 @@ def build_card(lead: Lead, asm: Assessment, owner: str) -> HandoffCard:
         qualificationScore=asm.qualificationScore, replyIntent=asm.replyIntent, threadId=lead.threadId,
         unresolved=asm.missingFields, recommendedNextAction=asm.nextAction,
         summary=card_summary(lead, asm, title), policyVersion=asm.policyVersion, models=models,
+        engagement=engagement_summary(lead), routingReason=routing_reason,
     )
 
 
@@ -549,7 +589,8 @@ def assessment_view(asm: Assessment) -> dict[str, Any]:
         "intentConfidence": asm.intentConfidence, "qualificationScore": asm.qualificationScore,
         "bantScore": asm.bantScore, "bant": {k: v.status for k, v in asm.bant.items()},
         "missingFields": asm.missingFields, "nextQuestion": asm.nextQuestion, "nextAction": asm.nextAction,
-        "policyVersion": asm.policyVersion, "mode": asm.mode,
+        "intentStrength": asm.intentStrength, "objections": asm.objections, "competitors": asm.competitors,
+        "buyingSignals": asm.buyingSignals, "policyVersion": asm.policyVersion, "mode": asm.mode,
     }
 
 
@@ -689,19 +730,29 @@ async def _assess_and_route(lead_id: str, msg_id: str, run: Run) -> None:
         info["detail"] = await route(lead, asm, run)
 
 
-# The account executive who should receive a qualified handoff (CRM account owner first)
-def ae_owner(lead: Lead) -> str:
+# Pick the AE for a handoff: CRM account owner first, else the first matching territory/product rule; returns (owner, reason)
+def ae_assignment(lead: Lead) -> tuple[str, str]:
     if lead.accountOwnerId:
-        return lead.accountOwnerId
-    return lead.ownerId if lead.ownerId and lead.ownerId.startswith("ae.") else config.DEFAULT_AE_OWNER
+        return lead.accountOwnerId, f"Account already owned by {person_name(lead.accountOwnerId)} in the CRM"
+    country = (lead.input.country or "").strip().upper()
+    country = COUNTRY_ALIASES.get(country, country)
+    for countries, products, owner, why in AE_TERRITORY_RULES:
+        if (countries is None or country in countries) and (products is None or lead.input.productId in products):
+            return owner, f"{person_name(owner)} {why}"
+    return config.DEFAULT_AE_OWNER, f"{person_name(config.DEFAULT_AE_OWNER)} is the default AE"
+
+
+# The account executive who should receive a qualified handoff
+def ae_owner(lead: Lead) -> str:
+    return ae_assignment(lead)[0]
 
 
 # Apply an assessment's route to the lead; returns a human-readable outcome
 async def route(lead: Lead, asm: Assessment, run: Run) -> str:
     reasons = "; ".join(asm.routeReasons) or asm.route
     if asm.route == "rep_review":
-        owner = ae_owner(lead)
-        card = build_card(lead, asm, owner)
+        owner, why = ae_assignment(lead)
+        card = build_card(lead, asm, owner, why)
         task = upsert_task(lead, "ae_handoff", owner, f"Qualified: {lead.input.fullName} ({lead.input.companyName})", card)
         lead.ownerId = owner
         close_sdr_tasks(lead.id)
@@ -727,8 +778,8 @@ async def route(lead: Lead, asm: Assessment, run: Run) -> str:
         set_stage(lead, "CLOSED", reasons)
         return f"closed: {reasons}"
 
-    owner = ae_owner(lead)
-    card = build_card(lead, asm, owner)
+    owner, why = ae_assignment(lead)
+    card = build_card(lead, asm, owner, why)
     task = upsert_task(lead, "owner_task", owner, f"Reply on existing opportunity from {lead.input.fullName}", card)
     set_stage(lead, "HUMAN_REVIEW", reasons)
     return f"routed to existing owner {owner} (task {task.id})"
@@ -744,7 +795,9 @@ async def _route_human_review(lead: Lead, asm: Assessment, run: Run, reasons: st
         task_type = "sdr_review"
     else:
         task_type = "sdr_followup"
-    card = build_card(lead, asm, owner)
+    why = (f"{person_name(owner)} (SDR) owns follow-up until the lead is qualified: "
+           + (asm.nextAction or "needs a human decision"))
+    card = build_card(lead, asm, owner, why)
     task = upsert_task(lead, task_type, owner, f"{task_type.replace('_', ' ').title()}: {lead.input.fullName}", card)
     if not (lead.ownerId or "").startswith("sdr."):
         lead.accountOwnerId = lead.accountOwnerId or lead.ownerId
@@ -814,7 +867,8 @@ def _exclusion(lead: Lead) -> Optional[str]:
 # Outbound campaign: cohort search -> identity/enrich/ICP (no inbound drafting) -> sequence enrollment + drafts
 async def create_campaign(inp: CampaignInput) -> dict[str, Any]:
     run = start_run("campaign")
-    campaign = Campaign(name=inp.name, theme=inp.theme, cohort=inp.cohort, touchDays=inp.touchDays, status="DRAFTING")
+    campaign = Campaign(name=inp.name, theme=inp.theme, cohort=inp.cohort, touchDays=inp.touchDays, status="DRAFTING",
+                        channels=["email", *dict.fromkeys(c for c in inp.channels if c != "email")])
     db.put("campaigns", campaign)
     workflow_requests.save(run.id, {"campaignInput": inp.model_dump(mode="json"), "campaignId": campaign.id})
     jobs.enqueue(run.id, None, "campaign", {"requestId": run.id})

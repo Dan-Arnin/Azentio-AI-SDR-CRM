@@ -75,8 +75,13 @@ Orchestrates everything above; the ONLY layer that changes `Lead.stage`, creates
 | POST /v1/drafts/{id}/approve | `{reviewer, contentHash}` | Draft |
 | POST /v1/drafts/{id}/reject | `{reason}` | Draft |
 | POST /v1/drafts/{id}/send | | Message (simulated) |
+| POST /v1/leads/{id}/linkedin-note | | Draft (`kind: linkedin_note`, ≤280 chars, research-anchored, awaits approval) |
+| POST /v1/drafts/{id}/linkedin-launch | | 202 `{status: sending\|queued, text}` — APPROVED note to `LINKEDIN_TEST_PROFILE_URL` only. Connected → direct message (Message Sender worker); invite pending → queued as the Outreach workflow's 0-day follow-up (sends on acceptance); not invited → invite (Auto Connect worker, note saved as invite text). A Message is recorded only after the run log confirms delivery; the draft's `nextAction` carries the status sentence. Never errors on provider failure |
+| POST /v1/drafts/{id}/send-sms | `{channel: sms\|whatsapp}` | Message on success, else 202 `{status: queued, text}` (channel not available; draft stays approved with a `nextAction` note) |
+| GET /v1/integrations/phantombuster/runs/{id} | | `{status, exitCode, logTail}` — the run log is the only proof of what reached LinkedIn |
 | POST /v1/campaigns | CampaignInput | Campaign + enrollments + touch drafts |
 | GET /v1/campaigns/{id} | | Campaign detail |
+| POST /v1/campaigns/{id}/channels | `{channel: linkedin\|whatsapp\|sms}` | 202 `{status: drafting, text}` — adds the channel and writes one approval-ready draft per active contact in the background (LinkedIn note / WhatsApp / text). `POST /v1/campaigns` also accepts `channels` (email always included) and drafts the extra channels after creation. `GET /v1/campaigns` items carry `channels` and `channelStats.{email,linkedin,whatsapp,sms}.{review,approved,sent}` |
 | POST /v1/demo/clock | `{advanceHours}` | `{now, sent:[...], skipped:[...]}` |
 | GET /v1/tasks, PATCH /v1/tasks/{id} | `{status}` | AE alerts / SDR tasks; accepting ae_handoff -> OPPORTUNITY |
 | GET /v1/alerts | | open ae_handoff tasks with HandoffCard |

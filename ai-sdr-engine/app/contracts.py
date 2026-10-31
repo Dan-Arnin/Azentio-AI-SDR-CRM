@@ -7,7 +7,7 @@ from typing import Any, Literal, Optional
 
 from pydantic import BaseModel, Field, field_validator
 
-Source = Literal["website", "webinar", "event", "ad", "marketing_csv", "target_account"]
+Source = Literal["website", "webinar", "event", "ad", "marketing_csv", "target_account", "linkedin"]
 ProductId = Literal["lending_platform", "islamic_banking", "aml_compliance", "unknown"]
 Permission = Literal["allowed", "unknown", "denied"]
 
@@ -26,7 +26,7 @@ ReplyIntent = Literal[
 Route = Literal["rep_review", "human_review", "nurture", "suppressed", "closed", "existing_owner"]
 DraftKind = Literal[
     "qualifying_email", "event_followup", "ad_followup", "gap_fill",
-    "outbound_touch_1", "outbound_touch_2", "outbound_touch_3", "nurture_reminder",
+    "outbound_touch_1", "outbound_touch_2", "outbound_touch_3", "nurture_reminder", "linkedin_note", "sms_message",
 ]
 DraftStatus = Literal["DRAFT", "APPROVED", "REJECTED", "SIMULATED_SENT", "STALE", "BLOCKED"]
 EnrollmentState = Literal["ACTIVE", "STOPPED_REPLY", "STOPPED_SUPPRESSION", "COMPLETED"]
@@ -156,6 +156,10 @@ class Assessment(BaseModel):
     nextQuestion: Optional[str] = None
     nextAction: str = ""
     decision: Optional[DecisionResult] = None
+    intentStrength: Literal["buying", "exploring", "none"] = "none"
+    objections: list[dict[str, Any]] = Field(default_factory=list)
+    competitors: list[dict[str, Any]] = Field(default_factory=list)
+    buyingSignals: list[dict[str, Any]] = Field(default_factory=list)
     mode: Literal["live", "fixture"] = "live"
     createdAt: str = Field(default_factory=now_iso)
 
@@ -193,10 +197,10 @@ class Message(BaseModel):
     subject: str = ""
     body: str
     at: str = Field(default_factory=now_iso)
-    origin: Literal["simulated", "scripted", "test_inbox", "form", "resend"] = "simulated"
+    origin: Literal["simulated", "scripted", "test_inbox", "form", "resend", "twilio", "phantombuster"] = "simulated"
     draftId: Optional[str] = None
     enrollmentId: Optional[str] = None
-    transport: Literal["simulated", "resend"] = "simulated"
+    transport: Literal["simulated", "resend", "twilio", "phantombuster"] = "simulated"
     intendedTo: Optional[str] = None
     deliveredTo: Optional[str] = None
     providerMessageId: Optional[str] = None
@@ -217,7 +221,11 @@ class CohortDefinition(BaseModel):
     roles: list[str] = Field(default_factory=list)
     countries: list[str] = Field(default_factory=list)
     institutionTypes: list[str] = Field(default_factory=list)
+    industries: list[str] = Field(default_factory=list)
     limit: int = 10
+
+
+Channel = Literal["email", "linkedin", "whatsapp", "sms"]
 
 
 class CampaignInput(BaseModel):
@@ -225,6 +233,7 @@ class CampaignInput(BaseModel):
     theme: str
     cohort: CohortDefinition
     touchDays: list[int] = Field(default_factory=lambda: [0, 3, 7])
+    channels: list[Channel] = Field(default_factory=lambda: ["email"])
 
 
 class Campaign(BaseModel):
@@ -233,6 +242,7 @@ class Campaign(BaseModel):
     theme: str
     cohort: CohortDefinition
     touchDays: list[int]
+    channels: list[Channel] = Field(default_factory=lambda: ["email"])
     status: Literal["DRAFTING", "ACTIVE", "COMPLETED"] = "DRAFTING"
     enrollmentIds: list[str] = Field(default_factory=list)
     exclusions: list[dict[str, Any]] = Field(default_factory=list)
@@ -268,6 +278,8 @@ class HandoffCard(BaseModel):
     summary: str = ""
     policyVersion: str = ""
     models: dict[str, str] = Field(default_factory=dict)
+    engagement: dict[str, Any] = Field(default_factory=dict)
+    routingReason: str = ""
 
 
 class Task(BaseModel):
