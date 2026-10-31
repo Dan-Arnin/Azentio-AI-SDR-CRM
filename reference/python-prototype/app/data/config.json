@@ -1,0 +1,337 @@
+{
+  "_note": "SAMPLE CONFIGURATION. Product names are Azentio's public product lines; all messaging below is SAMPLE CONTENT for the hackathon and must be checked against public Azentio material before real use.",
+  "regions": {
+    "GCC": [
+      "SA",
+      "AE",
+      "QA",
+      "KW",
+      "BH",
+      "OM"
+    ],
+    "India": [
+      "IN"
+    ],
+    "Africa": [
+      "KE",
+      "NG",
+      "EG",
+      "ZA",
+      "GH",
+      "TZ"
+    ],
+    "SEA": [
+      "MY",
+      "ID",
+      "SG",
+      "PH"
+    ],
+    "EU": [
+      "DE",
+      "FR",
+      "NL",
+      "IE",
+      "ES",
+      "IT",
+      "BE",
+      "SE"
+    ]
+  },
+  "consent_required_regions": [
+    "EU"
+  ],
+  "products": {
+    "kastle": {
+      "name": "Kastle (Lending)",
+      "keywords": [
+        "lending",
+        "loan",
+        "origination",
+        "los",
+        "lms",
+        "financing",
+        "credit",
+        "collections"
+      ],
+      "icp": {
+        "regions": [
+          "GCC",
+          "India",
+          "Africa",
+          "SEA"
+        ],
+        "institution_types": [
+          "bank",
+          "islamic_bank",
+          "nbfc",
+          "microfinance"
+        ],
+        "seniority": [
+          "c_suite",
+          "vp",
+          "head",
+          "director"
+        ],
+        "min_employees": 200,
+        "relevance": {
+          "departments": [
+            "lending",
+            "retail",
+            "sme",
+            "credit",
+            "operations",
+            "transformation",
+            "executive",
+            "digital"
+          ],
+          "title_keywords": [
+            "lending",
+            "loan",
+            "credit",
+            "retail",
+            "sme",
+            "digital",
+            "transformation",
+            "operations",
+            "chief executive",
+            "ceo"
+          ]
+        }
+      }
+    },
+    "amlock": {
+      "name": "AMLOCK (AML & Compliance)",
+      "keywords": [
+        "aml",
+        "anti-money laundering",
+        "compliance",
+        "screening",
+        "sanctions",
+        "transaction monitoring",
+        "false positives",
+        "kyc"
+      ],
+      "icp": {
+        "regions": [
+          "GCC",
+          "India",
+          "Africa"
+        ],
+        "institution_types": [
+          "bank",
+          "islamic_bank",
+          "exchange_house",
+          "nbfc"
+        ],
+        "seniority": [
+          "c_suite",
+          "vp",
+          "head",
+          "director"
+        ],
+        "min_employees": 200,
+        "relevance": {
+          "departments": [
+            "compliance",
+            "risk",
+            "financial crime",
+            "executive"
+          ],
+          "title_keywords": [
+            "compliance",
+            "risk",
+            "aml",
+            "financial crime",
+            "mlro",
+            "chief executive",
+            "ceo"
+          ]
+        }
+      }
+    },
+    "imal": {
+      "name": "iMAL (Islamic Core Banking)",
+      "keywords": [
+        "core banking",
+        "islamic banking",
+        "shariah",
+        "murabaha",
+        "ijarah",
+        "islamic window"
+      ],
+      "icp": {
+        "regions": [
+          "GCC",
+          "Africa",
+          "SEA"
+        ],
+        "institution_types": [
+          "islamic_bank",
+          "bank"
+        ],
+        "seniority": [
+          "c_suite",
+          "vp",
+          "head",
+          "director"
+        ],
+        "min_employees": 300,
+        "relevance": {
+          "departments": [
+            "it",
+            "technology",
+            "transformation",
+            "operations",
+            "executive",
+            "digital"
+          ],
+          "title_keywords": [
+            "technology",
+            "information officer",
+            "cio",
+            "cto",
+            "transformation",
+            "operations",
+            "digital",
+            "core banking",
+            "chief executive",
+            "ceo"
+          ]
+        }
+      }
+    }
+  },
+  "icp_weights": {
+    "geography": 25,
+    "institution_type": 25,
+    "seniority": 20,
+    "size": 15,
+    "product_relevance": 15
+  },
+  "icp_thresholds": {
+    "high": 75,
+    "medium": 50
+  },
+  "messaging": {
+    "kastle": {
+      "approved_claims": [
+        "Kastle is a lending platform that covers loan origination, servicing and collections in one suite.",
+        "Kastle supports both conventional and Islamic financing products."
+      ]
+    },
+    "amlock": {
+      "approved_claims": [
+        "AMLOCK is an AML and compliance suite covering transaction monitoring, customer screening and case management.",
+        "AMLOCK helps compliance teams prioritise alerts so analysts spend time on the cases that matter."
+      ]
+    },
+    "imal": {
+      "approved_claims": [
+        "iMAL is a Shariah-compliant core banking platform built for Islamic banks and Islamic windows."
+      ]
+    }
+  },
+  "themes": {
+    "next_gen_lending": {
+      "title": "Next-generation lending",
+      "angle": "how lenders are moving from fragmented origination and servicing tools to one digital lending journey"
+    },
+    "ai_in_aml": {
+      "title": "AI in anti-money laundering",
+      "angle": "how compliance teams are using AI to cut false positives and focus analysts on genuine risk"
+    },
+    "islamic_digital": {
+      "title": "Digital transformation in Islamic banking",
+      "angle": "how Islamic banks are modernising core platforms while keeping products Shariah-compliant"
+    }
+  },
+  "banned_terms": [
+    "price",
+    "pricing",
+    "discount",
+    "cost",
+    "costs",
+    "quote",
+    "guarantee",
+    "guaranteed",
+    "free of charge",
+    "sla",
+    "commitment",
+    "contract",
+    "%",
+    "roi"
+  ],
+  "owners": {
+    "ae_by_region": {
+      "GCC": {
+        "name": "Aisha Rahman",
+        "role": "Account Executive, GCC",
+        "email": "aisha.rahman@azentio-demo.example"
+      },
+      "India": {
+        "name": "Rohan Mehta",
+        "role": "Account Executive, India",
+        "email": "rohan.mehta@azentio-demo.example"
+      },
+      "Africa": {
+        "name": "Kwame Mensah",
+        "role": "Account Executive, Africa",
+        "email": "kwame.mensah@azentio-demo.example"
+      },
+      "default": {
+        "name": "Daniel Ortiz",
+        "role": "Account Executive, International",
+        "email": "daniel.ortiz@azentio-demo.example"
+      }
+    },
+    "sdr": {
+      "name": "Priya Nair",
+      "role": "Sales Development Representative",
+      "email": "priya.nair@azentio-demo.example"
+    }
+  },
+  "guardrails": {
+    "approval_mode": "always",
+    "approval_first_n_sends": 2,
+    "daily_send_cap": 50,
+    "max_gap_followups": 1,
+    "min_confidence": 0.6
+  },
+  "qualification_rule": "QUALIFIED when Need is confirmed AND Timeline is confirmed and within 12 months AND at least one of Budget or Authority is confirmed. Inferred signals count towards the BANT score but never alone qualify a lead.",
+  "cohorts": {
+    "gcc_compliance_heads": {
+      "label": "Heads of Compliance across banks in the GCC",
+      "title_keywords": [
+        "head of compliance",
+        "chief compliance officer"
+      ],
+      "regions": [
+        "GCC"
+      ],
+      "institution_types": [
+        "bank",
+        "islamic_bank"
+      ],
+      "theme": "ai_in_aml",
+      "product": "amlock"
+    },
+    "islamic_bank_transformation": {
+      "label": "CEOs, CTOs and Heads of Transformation across Islamic banks",
+      "title_keywords": [
+        "chief executive officer",
+        "chief transformation officer",
+        "head of transformation"
+      ],
+      "regions": [
+        "GCC",
+        "Africa",
+        "SEA"
+      ],
+      "institution_types": [
+        "islamic_bank"
+      ],
+      "theme": "next_gen_lending",
+      "product": "kastle"
+    }
+  }
+}

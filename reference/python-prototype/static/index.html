@@ -1,0 +1,150 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>AI SDR Console</title>
+<link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+<header class="top">
+  <div class="brand">
+    <span class="logo">◆</span>
+    <div>
+      <h1>AI SDR Console</h1>
+      <p class="sub">Azentio GTM hackathon prototype · synthetic data · emails are simulated, never sent externally</p>
+    </div>
+  </div>
+  <div class="top-right">
+    <span id="engine" class="pill"></span>
+    <button id="reset" class="ghost">Reset demo data</button>
+  </div>
+</header>
+
+<nav class="tabs" id="tabs">
+  <button data-tab="pipeline" class="active">Pipeline</button>
+  <button data-tab="inbound">Inbound</button>
+  <button data-tab="outbound">Outbound</button>
+  <button data-tab="approvals">Approvals <span id="badge-approvals" class="count"></span></button>
+  <button data-tab="alerts">Rep alerts <span id="badge-alerts" class="count"></span></button>
+  <button data-tab="crm">CRM &amp; guardrails</button>
+</nav>
+
+<main>
+  <section id="tab-pipeline" class="tab active">
+    <div id="stats" class="tiles"></div>
+    <div class="toolbar">
+      <label>Stage <select id="f-state"><option value="">All</option></select></label>
+      <label>Source <select id="f-source"><option value="">All</option></select></label>
+      <label>ICP fit <select id="f-icp"><option value="">All</option></select></label>
+      <label><input type="checkbox" id="f-ready"> Ready for human follow-up</label>
+    </div>
+    <div class="table-wrap"><table id="leads"><thead><tr>
+      <th>Lead</th><th>Account</th><th>Source</th><th>Product</th><th>ICP</th><th>BANT</th><th>Stage</th><th>Next action</th>
+    </tr></thead><tbody></tbody></table></div>
+    <p id="empty-pipeline" class="muted center">No leads yet. Start from <b>Inbound</b> or <b>Outbound</b>.</p>
+  </section>
+
+  <section id="tab-inbound" class="tab">
+    <div class="grid2">
+      <div class="card">
+        <h2>Single lead</h2>
+        <p class="muted">Website contact-us, event registration or ad form-fill. Load a sample, edit anything, then submit.</p>
+        <div class="row gap">
+          <button class="ghost" data-sample="website_form">Sample: website enquiry</button>
+          <button class="ghost" data-sample="event">Sample: event registration</button>
+          <button class="ghost" data-sample="ad_form">Sample: LinkedIn ad form</button>
+          <button class="ghost" data-sample="marketing_campaign">Sample: marketing campaign</button>
+        </div>
+        <form id="lead-form" class="form">
+          <label>Source<select name="source">
+            <option value="website_form">Website contact form</option><option value="marketing_campaign">Marketing campaign</option>
+            <option value="ad_form">LinkedIn / Google ad form-fill</option><option value="webinar">Webinar attendee</option>
+            <option value="event">Event registration</option></select></label>
+          <label>Product<select name="product"><option value="">Infer from message</option></select></label>
+          <label>First name<input name="first_name"></label>
+          <label>Last name<input name="last_name"></label>
+          <label>Email *<input name="email"></label>
+          <label>Company<input name="company"></label>
+          <label>Title<input name="title"></label>
+          <label>Country (ISO)<input name="country" maxlength="2"></label>
+          <label class="wide">Message / context<textarea name="message" rows="2"></textarea></label>
+          <label>Event name<input name="event_name"></label>
+          <label>Campaign<input name="campaign"></label>
+          <label>Ad platform<select name="ad_platform"><option value=""></option><option>LinkedIn</option><option>Google</option></select></label>
+          <label>Ad asset<input name="asset"></label>
+          <label class="check"><input type="checkbox" name="consent" checked> Marketing consent recorded</label>
+          <div class="wide"><button type="submit">Capture lead</button></div>
+        </form>
+        <div id="lead-form-result"></div>
+      </div>
+      <div class="card">
+        <h2>Webinar attendee list</h2>
+        <p class="muted">CSV with first_name, last_name, email, company, title, country, attended, consent. Every row is accepted or rejected with a reason.</p>
+        <form id="webinar-form" class="form">
+          <label class="wide">Webinar<input name="webinar"></label>
+          <label>Product<select name="product"></select></label>
+          <label>Upload CSV<input type="file" name="file" accept=".csv"></label>
+          <label class="wide">…or paste CSV<textarea name="csv_text" rows="7" class="mono"></textarea></label>
+          <div class="wide row gap"><button type="button" class="ghost" id="webinar-sample">Load sample list</button><button type="submit">Import attendees</button></div>
+        </form>
+        <div id="webinar-result"></div>
+      </div>
+      <div class="card">
+        <h2>Bulk import (any source)</h2>
+        <p class="muted">CSV or JSON list of leads; each row may set its own <code>source</code>. Defaults below fill gaps. Every row is captured or rejected with a reason.</p>
+        <form id="import-form" class="form">
+          <label>Default source<select name="source"><option value=""></option><option value="website_form">Website contact form</option>
+            <option value="marketing_campaign">Marketing campaign</option><option value="ad_form">Ad form-fill</option>
+            <option value="webinar">Webinar</option><option value="event">Event</option></select></label>
+          <label>Default product<select name="product"></select></label>
+          <label class="wide">Upload CSV / JSON<input type="file" name="file" accept=".csv,.json"></label>
+          <label class="wide">…or paste<textarea name="text" rows="7" class="mono"></textarea></label>
+          <div class="wide row gap"><button type="button" class="ghost" id="import-sample">Load sample JSON</button><button type="submit">Import leads</button></div>
+        </form>
+        <div id="import-result"></div>
+      </div>
+    </div>
+  </section>
+
+  <section id="tab-outbound" class="tab">
+    <div class="card">
+      <h2>New outbound sequence</h2>
+      <form id="seq-form" class="form">
+        <label class="wide">Cohort<select name="cohort_key"></select></label>
+        <label>Theme<select name="theme"></select></label>
+        <label>Product<select name="product"></select></label>
+        <label class="wide">Sequence name<input name="name" placeholder="e.g. GCC compliance - AI in AML"></label>
+        <div class="wide"><button type="submit">Build cohort &amp; draft sequence</button></div>
+      </form>
+    </div>
+    <div id="sequences"></div>
+  </section>
+
+  <section id="tab-approvals" class="tab">
+    <p class="muted">Approval mode: the first sends of every new sequence or template are reviewed by a human before the agent sends on its own.</p>
+    <div id="approvals"></div>
+  </section>
+
+  <section id="tab-alerts" class="tab">
+    <div id="alerts"></div>
+  </section>
+
+  <section id="tab-crm" class="tab">
+    <div class="grid2">
+      <div class="card"><h2>Opportunities created by the agent</h2><div id="crm-opps"></div></div>
+      <div class="card"><h2>Suppression list</h2><div id="crm-supp"></div></div>
+      <div class="card"><h2>Qualification rule</h2><div id="rule"></div></div>
+      <div class="card"><h2>Guardrails</h2><div id="guardrails"></div></div>
+    </div>
+  </section>
+</main>
+
+<aside id="drawer" class="drawer" aria-hidden="true">
+  <div class="drawer-head"><button id="drawer-close" class="ghost">✕ Close</button></div>
+  <div id="drawer-body"></div>
+</aside>
+<div id="toast" class="toast"></div>
+<script src="/static/app.js"></script>
+</body>
+</html>

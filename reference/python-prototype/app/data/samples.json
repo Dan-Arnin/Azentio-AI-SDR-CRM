@@ -1,0 +1,111 @@
+{
+  "_note": "SYNTHETIC inbound leads and scripted replies for the demo.",
+  "inbound": {
+    "website_form": {
+      "source": "website_form",
+      "first_name": "Sara",
+      "last_name": "Al-Qahtani",
+      "email": "sara.alqahtani@najd-capital.example",
+      "company": "Najd Capital Bank",
+      "title": "Head of Digital Lending",
+      "country": "SA",
+      "product": "kastle",
+      "message": "We'd like to understand how Kastle handles Islamic retail financing end to end.",
+      "consent": true
+    },
+    "ad_form": {
+      "source": "ad_form",
+      "first_name": "Chinedu",
+      "last_name": "Okafor",
+      "email": "chinedu.okafor@lagoonmfb.example",
+      "company": "Lagoon Microfinance Bank",
+      "title": "Head of Operations",
+      "country": "NG",
+      "product": "kastle",
+      "asset": "Digital Lending Playbook (whitepaper)",
+      "ad_platform": "LinkedIn",
+      "consent": true
+    },
+    "event": {
+      "source": "event",
+      "first_name": "Wanjiru",
+      "last_name": "Kamau",
+      "email": "wanjiru.kamau@savannatrust.example",
+      "company": "Savanna Trust Bank",
+      "title": "Chief Risk Officer",
+      "country": "KE",
+      "product": "kastle",
+      "event_name": "Azentio Lending Leaders Roundtable, Nairobi",
+      "consent": true
+    },
+    "marketing_campaign": {
+      "source": "marketing_campaign",
+      "first_name": "Ananya",
+      "last_name": "Iyer",
+      "email": "ananya.iyer@indusfin.example",
+      "company": "Indus Retail Finance",
+      "title": "VP, Lending Operations",
+      "country": "IN",
+      "product": "kastle",
+      "campaign": "Q4 Digital Lending email campaign - 'Cut loan turnaround time' content download",
+      "message": "Downloaded the loan origination benchmark report.",
+      "consent": true
+    }
+  },
+  "webinar_csv": "first_name,last_name,email,company,title,country,attended,consent\nAnanya,Iyer,ananya.iyer@indusfin.example,Indus Retail Finance,\"VP, Lending Operations\",IN,yes,yes\nLukas,Becker,lukas.becker@rhinedigital.example,Rhine Digital Bank,Head of Compliance,DE,yes,no\nJohn,Miller,john.miller@acmeretail.example,Acme Retail Stores,Marketing Analyst,US,yes,yes\nNoura,Al-Sabah,noura.alsabah@oasisbank.example,Oasis Bank,Head of Compliance,KW,yes,yes\n,Unknown,not-an-email,,,,no,yes\n",
+  "webinar_name": "AI in AML: Cutting False Positives",
+  "webinar_product": "amlock",
+  "scripted_replies": {
+    "qualified": "Thanks for the quick response. We are replacing our legacy lending platform for retail and SME financing, including murabaha products. We have approved funding for FY27 and vendor selection is planned for Q1 2027. I lead the programme and will involve our CIO in the evaluation.",
+    "partial": "Yes, we're looking at modernising our AML transaction monitoring - the main pain is too many false positives for a small team. No fixed timeline yet.",
+    "gap_answer": "To answer your questions: we expect to select a vendor by June 2027. Budget is being discussed at next quarter's investment committee. I own the evaluation together with our CRO.",
+    "pricing_ask": "Interested. Can you send me your pricing? We need something live by March.",
+    "not_now": "Thanks, but this is not a priority for us this year. Maybe reach out next year.",
+    "referral": "I'm not the right person for this. Please speak to Omar Haddad, our Head of Compliance, at omar.haddad@najd-capital.example.",
+    "unsubscribe": "Please remove me from your mailing list and stop emailing me.",
+    "out_of_office": "I am out of office until 10 November with limited access to email.",
+    "ambiguous": "Hmm, maybe. Let me think about it."
+  },
+  "bulk_json": [
+    {
+      "source": "ad_form",
+      "ad_platform": "Google",
+      "first_name": "Vikram",
+      "last_name": "Rao",
+      "email": "vikram.rao@gangacoop.example",
+      "company": "Ganga Cooperative Bank",
+      "title": "IT Manager",
+      "country": "IN",
+      "product": "kastle",
+      "asset": "Lending Modernisation Checklist",
+      "consent": true
+    },
+    {
+      "source": "event",
+      "first_name": "Wanjiru",
+      "last_name": "Kamau",
+      "email": "wanjiru.kamau@savannatrust.example",
+      "company": "Savanna Trust Bank",
+      "title": "Chief Risk Officer",
+      "country": "KE",
+      "product": "kastle",
+      "event_name": "Azentio Lending Leaders Roundtable, Nairobi",
+      "consent": true
+    },
+    {
+      "source": "website_form",
+      "first_name": "Pat",
+      "last_name": "Lee",
+      "email": "pat.lee@gmail.com",
+      "company": "",
+      "title": "",
+      "country": "",
+      "message": "Do you have an Islamic core banking product?",
+      "consent": true
+    },
+    {
+      "source": "newsletter",
+      "email": "someone@example"
+    }
+  ]
+}

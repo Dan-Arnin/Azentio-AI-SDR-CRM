@@ -1,0 +1,8 @@
+sourceRecordId,source,fullName,email,phone,companyName,companyDomain,country,institutionType,role,employeeCount,productId,inquiry,eventName,campaignId,contactPermission,submittedAt
+web-001,website,Sara Al-Qahtani,sara.alqahtani@najd-capital.example,,Najd Capital Bank,,SA,,Head of Digital Lending,,kastle,We are replacing our lending platform. Please arrange a discussion.,,,allowed,2026-10-31T09:00:00Z
+wbn-001,webinar,Ananya Iyer,ananya.iyer@indusfin.example,,Indus Retail Finance,,IN,,,,kastle,Attended the webinar,AI in Lending Webinar,,unknown,2026-10-30T12:00:00Z
+wbn-002,webinar,Lukas Becker,lukas.becker@rhinedigital.example,,Rhine Digital Bank,,DE,,,,amlock,Attended the webinar,AI in AML: Cutting False Positives,,unknown,2026-10-30T12:00:00Z
+ad-001,linkedin_ads,Chinedu Okafor,chinedu.okafor@lagoonmfb.example,,Lagoon Microfinance Bank,,NG,,Head of Operations,,kastle,Downloaded the Digital Lending Playbook,,li-q4-lending,allowed,2026-10-29T08:00:00Z
+web-002,website,Noura Al-Sabah,noura.alsabah@oasisbank.example,,Oasis Bank,,KW,,Head of Compliance,,amlock,Interested in screening upgrades,,,allowed,2026-10-31T10:00:00Z
+web-003,website,Pat Lee,pat.lee@gmail.com,,Unknown,,XX,,,,imal,Do you have an Islamic core banking product?,,,allowed,2026-10-31T11:00:00Z
+web-004,website,Bad Email,not-an-email,,X,,IN,,,,kastle,hello,,,allowed,

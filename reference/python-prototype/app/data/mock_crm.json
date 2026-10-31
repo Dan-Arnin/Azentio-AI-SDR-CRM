@@ -1,0 +1,61 @@
+{
+  "_note": "SYNTHETIC mock CRM used for duplicate and existing-opportunity checks.",
+  "contacts": [
+    {
+      "id": "crm_c1",
+      "email": "noura.alsabah@oasisbank.example",
+      "name": "Noura Al-Sabah",
+      "account": "Oasis Bank",
+      "owner": "Aisha Rahman"
+    },
+    {
+      "id": "crm_c2",
+      "email": "yousef.karim@oasisbank.example",
+      "name": "Yousef Karim",
+      "account": "Oasis Bank",
+      "owner": "Aisha Rahman"
+    }
+  ],
+  "opportunities": [
+    {
+      "id": "crm_o1",
+      "account_domain": "oasisbank.example",
+      "account": "Oasis Bank",
+      "name": "Oasis Bank - AMLOCK upgrade",
+      "product": "amlock",
+      "stage": "Discovery",
+      "owner": "Aisha Rahman",
+      "status": "open"
+    }
+  ],
+  "accounts": [
+    {
+      "id": "crm_a1",
+      "domain": "oasisbank.example",
+      "name": "Oasis Bank",
+      "relationship": "customer",
+      "products": [
+        "amlock"
+      ],
+      "owner": "Aisha Rahman"
+    },
+    {
+      "id": "crm_a2",
+      "domain": "savannatrust.example",
+      "name": "Savanna Trust Bank",
+      "relationship": "customer",
+      "products": [
+        "amlock"
+      ],
+      "owner": "Kwame Mensah"
+    },
+    {
+      "id": "crm_a3",
+      "domain": "indusfin.example",
+      "name": "Indus Retail Finance",
+      "relationship": "prospect",
+      "products": [],
+      "owner": "Rohan Mehta"
+    }
+  ]
+}

@@ -1,0 +1,35 @@
+{
+  "_note": "SYNTHETIC DATA. Fictional people and institutions on .example domains, shaped like Apollo person/organization records. Not real Azentio customers or prospects.",
+  "organizations": [
+    {"id": "org_najd", "name": "Najd Capital Bank", "domain": "najd-capital.example", "country": "SA", "institution_type": "islamic_bank", "employees": 4200, "total_assets_usd_bn": 38.5, "industry": "Banking"},
+    {"id": "org_pearl", "name": "Pearl Gulf Islamic Bank", "domain": "pearlgulf.example", "country": "AE", "institution_type": "islamic_bank", "employees": 2800, "total_assets_usd_bn": 21.0, "industry": "Banking"},
+    {"id": "org_dune", "name": "Dune Commercial Bank", "domain": "dunebank.example", "country": "QA", "institution_type": "bank", "employees": 1500, "total_assets_usd_bn": 12.4, "industry": "Banking"},
+    {"id": "org_falcon", "name": "Falcon Exchange House", "domain": "falconfx.example", "country": "AE", "institution_type": "exchange_house", "employees": 350, "total_assets_usd_bn": 0.6, "industry": "Financial Services"},
+    {"id": "org_oasis", "name": "Oasis Bank", "domain": "oasisbank.example", "country": "KW", "institution_type": "islamic_bank", "employees": 1900, "total_assets_usd_bn": 15.2, "industry": "Banking"},
+    {"id": "org_crescent", "name": "Crescent Takaful", "domain": "crescent-takaful.example", "country": "BH", "institution_type": "insurer", "employees": 600, "total_assets_usd_bn": 1.1, "industry": "Insurance"},
+    {"id": "org_indus", "name": "Indus Retail Finance", "domain": "indusfin.example", "country": "IN", "institution_type": "nbfc", "employees": 6000, "total_assets_usd_bn": 4.8, "industry": "Financial Services"},
+    {"id": "org_ganga", "name": "Ganga Cooperative Bank", "domain": "gangacoop.example", "country": "IN", "institution_type": "bank", "employees": 120, "total_assets_usd_bn": 0.2, "industry": "Banking"},
+    {"id": "org_savanna", "name": "Savanna Trust Bank", "domain": "savannatrust.example", "country": "KE", "institution_type": "bank", "employees": 2100, "total_assets_usd_bn": 5.3, "industry": "Banking"},
+    {"id": "org_lagoon", "name": "Lagoon Microfinance Bank", "domain": "lagoonmfb.example", "country": "NG", "institution_type": "microfinance", "employees": 90, "total_assets_usd_bn": 0.05, "industry": "Financial Services"},
+    {"id": "org_rhine", "name": "Rhine Digital Bank", "domain": "rhinedigital.example", "country": "DE", "institution_type": "bank", "employees": 800, "total_assets_usd_bn": 3.9, "industry": "Banking"},
+    {"id": "org_acme", "name": "Acme Retail Stores", "domain": "acmeretail.example", "country": "US", "institution_type": "retail", "employees": 5000, "total_assets_usd_bn": 0.0, "industry": "Retail"}
+  ],
+  "people": [
+    {"id": "p_sara", "first_name": "Sara", "last_name": "Al-Qahtani", "email": "sara.alqahtani@najd-capital.example", "title": "Head of Digital Lending", "seniority": "head", "department": "lending", "organization_id": "org_najd"},
+    {"id": "p_omar", "first_name": "Omar", "last_name": "Haddad", "email": "omar.haddad@najd-capital.example", "title": "Head of Compliance", "seniority": "head", "department": "compliance", "organization_id": "org_najd"},
+    {"id": "p_khalid", "first_name": "Khalid", "last_name": "Al-Harbi", "email": "khalid.alharbi@najd-capital.example", "title": "Head of Transformation", "seniority": "head", "department": "transformation", "organization_id": "org_najd"},
+    {"id": "p_layla", "first_name": "Layla", "last_name": "Mansour", "email": "layla.mansour@pearlgulf.example", "title": "Chief Transformation Officer", "seniority": "c_suite", "department": "transformation", "organization_id": "org_pearl"},
+    {"id": "p_mariam", "first_name": "Mariam", "last_name": "Al-Suwaidi", "email": "mariam.alsuwaidi@pearlgulf.example", "title": "Head of Compliance", "seniority": "head", "department": "compliance", "organization_id": "org_pearl"},
+    {"id": "p_hessa", "first_name": "Hessa", "last_name": "Al-Mannai", "email": "hessa.almannai@dunebank.example", "title": "Head of Compliance", "seniority": "head", "department": "compliance", "organization_id": "org_dune"},
+    {"id": "p_rashid", "first_name": "Rashid", "last_name": "Bin Saeed", "email": "rashid.binsaeed@falconfx.example", "title": "Head of Compliance", "seniority": "head", "department": "compliance", "organization_id": "org_falcon"},
+    {"id": "p_yousef", "first_name": "Yousef", "last_name": "Karim", "email": "yousef.karim@oasisbank.example", "title": "Chief Executive Officer", "seniority": "c_suite", "department": "executive", "organization_id": "org_oasis"},
+    {"id": "p_noura", "first_name": "Noura", "last_name": "Al-Sabah", "email": "noura.alsabah@oasisbank.example", "title": "Head of Compliance", "seniority": "head", "department": "compliance", "organization_id": "org_oasis"},
+    {"id": "p_fatima", "first_name": "Fatima", "last_name": "Zahra", "email": "fatima.zahra@crescent-takaful.example", "title": "Head of Compliance", "seniority": "head", "department": "compliance", "organization_id": "org_crescent"},
+    {"id": "p_ananya", "first_name": "Ananya", "last_name": "Iyer", "email": "ananya.iyer@indusfin.example", "title": "VP, Lending Operations", "seniority": "vp", "department": "lending", "organization_id": "org_indus"},
+    {"id": "p_vikram", "first_name": "Vikram", "last_name": "Rao", "email": "vikram.rao@gangacoop.example", "title": "IT Manager", "seniority": "manager", "department": "it", "organization_id": "org_ganga"},
+    {"id": "p_wanjiru", "first_name": "Wanjiru", "last_name": "Kamau", "email": "wanjiru.kamau@savannatrust.example", "title": "Chief Risk Officer", "seniority": "c_suite", "department": "risk", "organization_id": "org_savanna"},
+    {"id": "p_chinedu", "first_name": "Chinedu", "last_name": "Okafor", "email": "chinedu.okafor@lagoonmfb.example", "title": "Head of Operations", "seniority": "head", "department": "operations", "organization_id": "org_lagoon"},
+    {"id": "p_lukas", "first_name": "Lukas", "last_name": "Becker", "email": "lukas.becker@rhinedigital.example", "title": "Head of Compliance", "seniority": "head", "department": "compliance", "organization_id": "org_rhine"},
+    {"id": "p_john", "first_name": "John", "last_name": "Miller", "email": "john.miller@acmeretail.example", "title": "Marketing Analyst", "seniority": "entry", "department": "marketing", "organization_id": "org_acme"}
+  ]
+}
