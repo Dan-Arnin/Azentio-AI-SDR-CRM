@@ -817,6 +817,7 @@ table.vs th small { display: block; font-weight: 400; font-size: 11px; text-tran
 @media (max-width: 420px) { .kgrid { grid-template-columns: 1fr; } .facts { grid-template-columns: 1fr; } }
 @media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation: none !important; transition: none !important; scroll-behavior: auto !important; } }
 </style>
+<link rel="stylesheet" href="/static/trust.css?v=7" />
 </head>
 <body>
 <a class="skip" href="#main">Skip to content</a>
@@ -840,6 +841,7 @@ table.vs th small { display: block; font-weight: 400; font-size: 11px; text-tran
       <a href="#/studio" data-view="studio" title="AI Studio"><span data-icon="sparkle"></span><span class="lbl">AI Studio</span></a>
       <div class="nav-group" role="presentation"><span class="t">Insights</span></div>
       <a href="#/performance" data-view="performance" title="Performance"><span data-icon="chart"></span><span class="lbl">Performance</span></a>
+      <a href="#/trust" data-view="trust" title="Trust & governance"><span data-icon="shield"></span><span class="lbl">Trust & governance</span></a>
     </nav>
     <div class="sb-foot">
       <div class="menu-wrap">
@@ -879,6 +881,7 @@ table.vs th small { display: block; font-weight: 400; font-size: 11px; text-tran
 </div>
 <div class="toasts" id="toasts" aria-live="polite" aria-atomic="false"></div>
 
+<script src="/static/trust.js?v=7"></script>
 <script>
 "use strict";
 // ---------- Vocabulary (business language only) ----------
@@ -1164,6 +1167,7 @@ async function refresh(force) {
   }
   if (S.view === "insights") await grab("dash", "/v1/dashboard");
   if (S.view === "performance") await grab("perf", "/v1/performance?days=" + S.perfDays);
+  if (S.view === "trust") await loadTrust();
   if (S.view === "home") await grab("home", "/v1/home?userId=" + encodeURIComponent(S.me) + "&days=" + S.kpiDays);
   const typing = document.activeElement && document.activeElement.closest && document.activeElement.closest("#main") && /INPUT|TEXTAREA|SELECT/.test(document.activeElement.tagName);
   if (typing && !force) { scheduleRefresh(2500); return; }
@@ -1175,7 +1179,7 @@ async function refresh(force) {
 function scheduleRefresh(ms = 500) { clearTimeout(refreshTimer); refreshTimer = setTimeout(() => refresh(), ms); }
 
 // ---------- Routing ----------
-const VIEWS = ["home", "leads", "accounts", "account", "person", "studio", "approvals", "opportunities", "campaigns", "performance", "insights"];
+const VIEWS = ["home", "leads", "accounts", "account", "person", "studio", "approvals", "opportunities", "campaigns", "performance", "insights", "trust"];
 // Read the hash, update state and navigation, then render and refresh the view
 function route() {
   const [path, query] = location.hash.split("?");
@@ -1201,7 +1205,7 @@ function route() {
 const openLead = id => { location.hash = "#/leads/" + id; };
 
 // ---------- Render root ----------
-const GROUP = { leads: "Pipeline", accounts: "Pipeline", account: "Pipeline", person: "Pipeline", opportunities: "Pipeline", approvals: "Outreach", campaigns: "Outreach", studio: "Outreach", performance: "Insights", insights: "Insights" };
+const GROUP = { leads: "Pipeline", accounts: "Pipeline", account: "Pipeline", person: "Pipeline", opportunities: "Pipeline", approvals: "Outreach", campaigns: "Outreach", studio: "Outreach", performance: "Insights", insights: "Insights", trust: "Insights" };
 // Breadcrumb trail for the current view: [label, href?]
 function crumbs() {
   const leadName = S.detail && S.detail.lead && S.detail.lead.id === S.leadId ? S.detail.lead.input.fullName : "";
@@ -1217,6 +1221,7 @@ function crumbs() {
     case "studio": return [["AI Studio"]];
     case "performance": return [["Performance"]];
     case "insights": return [["Performance", "#/performance"], ["Pipeline health"]];
+    case "trust": return [["Trust & governance"]];
   }
   return [["Home"]];
 }
@@ -1231,7 +1236,7 @@ function paintCrumbs() {
 function render() {
   const main = $("#main"); const keep = window.scrollY;
   let node;
-  try { node = ({ home: viewHome, leads: viewLeads, accounts: viewAccounts, account: viewAccount, person: viewPerson, studio: viewStudio, approvals: viewApprovals, opportunities: viewOpps, campaigns: viewCampaigns, performance: viewPerformance, insights: viewInsights })[S.view](); }
+  try { node = ({ home: viewHome, leads: viewLeads, accounts: viewAccounts, account: viewAccount, person: viewPerson, studio: viewStudio, approvals: viewApprovals, opportunities: viewOpps, campaigns: viewCampaigns, trust: viewTrust, performance: viewPerformance, insights: viewInsights })[S.view](); }
   catch (e) { console.warn("view render", e); node = h("div", { class: "card" }, emptyCard("sparkle", "Getting this page ready", "It will appear in a moment. Everything you've done so far is saved.")); }
   main.replaceChildren(node);
   hydrateIcons(main);
@@ -1845,7 +1850,7 @@ function viewRail() {
 }
 
 // ---------- Accounts & people ----------
-const PAGE_VIEWS = ["accounts", "account", "person", "studio"];
+const PAGE_VIEWS = ["accounts", "account", "person", "studio", "trust"];
 const SIGNAL = { expansion: ["Expansion", "blue"], digital: ["Digital", "mint"], regulatory: ["Regulatory", "amber"], leadership_change: ["Leadership change", "outline"], funding: ["Funding", "mint"], partnership: ["Partnership", "blue"], hiring: ["Hiring", "outline"], results: ["Results", "ink"], other: ["Other", "grey"] };
 const ACT_KIND = { email_sent: ["send", ""], reply: ["reply", "mint"], linkedin: ["linkedin", ""], text: ["message", ""], stage: ["target", "mint"], handoff: ["usercheck", "mint"] };
 const CHANNEL = { email: ["mail", "Email"], linkedin: ["linkedin", "LinkedIn"], text: ["message", "Text message"], form: ["globe", "Enquiry form"] };

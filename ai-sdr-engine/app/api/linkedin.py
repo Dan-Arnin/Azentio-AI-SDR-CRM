@@ -5,7 +5,7 @@ import asyncio
 import uuid
 from typing import Any, Optional
 
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, Request
 from pydantic import BaseModel
 
 from app import db
@@ -47,17 +47,22 @@ async def campaign_notes(campaign_id: str) -> dict[str, Any]:
 
 # Record that an approved note was sent manually on LinkedIn
 @router.post("/drafts/{draft_id}/linkedin-sent")
-def linkedin_sent(draft_id: str) -> Any:
+def linkedin_sent(draft_id: str, request: Request) -> Any:
     from app import pipeline
     from app.engagement.linkedin import mark_sent
     draft = db.get("drafts", draft_id, Draft)
     if not draft:
         raise HTTPException(404, detail={"code": "not_found"})
     lead = _lead(draft.leadId)
+    from app.governance import auth as gov_auth, gates
+    who = gov_auth.actor(request, "reviewer")
     try:
         msg = mark_sent(draft, lead)
     except ValueError as exc:
+        if str(exc) in ("contact_blocked", "campaign_paused"):
+            gates.record(who, draft, lead.id, "linkedin", blocked=str(exc))
         raise HTTPException(409, detail={"code": str(exc)}) from exc
+    gates.record(who, draft, lead.id, "linkedin", message_id=msg.id)
     pipeline.emit("message.sent", lead, messageId=msg.id, draftId=draft.id, kind="linkedin_note", channel="linkedin", subject=msg.subject)
     return msg
 
@@ -135,6 +140,8 @@ async def _confirm(draft_id: str, container: str, target: str, direct: bool) -> 
                       body=draft.body, draftId=draft.id, enrollmentId=draft.enrollmentId, origin="phantombuster", transport="phantombuster",
                       deliveryStatus="accepted", providerMessageId=container, deliveredTo=target, intendedTo=f"LinkedIn: {lead.input.fullName}")
         db.put("messages", msg)
+        from app.governance import gates
+        gates.record(("system", "system"), draft, lead.id, "linkedin", message_id=msg.id)
         _note_status(draft.id, "Sent on LinkedIn", "SIMULATED_SENT")
         pipeline.emit("message.sent", lead, messageId=msg.id, draftId=draft.id, kind="linkedin_note", channel="linkedin", subject=msg.subject)
     elif outcome == "not_connected":
@@ -149,7 +156,7 @@ async def _confirm(draft_id: str, container: str, target: str, direct: bool) -> 
 
 # Send an approved note on LinkedIn (allow-listed test profile only): invite if never contacted, else direct message (queued for acceptance if LinkedIn refuses)
 @router.post("/drafts/{draft_id}/linkedin-launch", status_code=202)
-async def linkedin_launch(draft_id: str) -> dict[str, Any]:
+async def linkedin_launch(draft_id: str, request: Request) -> dict[str, Any]:
     from app import config
     from app.engagement.drafting import content_hash
     from app.integrations.phantombuster import PhantomBusterError, connection_state, launch_message, launch_outreach
@@ -159,8 +166,11 @@ async def linkedin_launch(draft_id: str) -> dict[str, Any]:
     lead = _lead(draft.leadId)
     if draft.status != "APPROVED" or draft.contentHash != content_hash(draft.subject, draft.body):
         raise HTTPException(409, detail={"code": "not_approved"})
-    if lead.suppressed or lead.input.contactPermission == "denied":
-        raise HTTPException(409, detail={"code": "contact_blocked"})
+    from app.governance import auth as gov_auth, gates
+    who = gov_auth.actor(request, "reviewer")
+    if blocked := gates.blocked_reason(draft, lead):
+        gates.record(who, draft, lead.id, "linkedin", blocked=blocked)
+        raise HTTPException(409, detail={"code": blocked})
     target = config.env("LINKEDIN_TEST_PROFILE_URL")
     try:
         state = await connection_state(target)
@@ -169,6 +179,7 @@ async def linkedin_launch(draft_id: str) -> dict[str, Any]:
         _note_status(draft.id, RETRY_TEXT)
         return {"status": "queued", "text": RETRY_TEXT}
     _note_status(draft.id, SENDING_TEXT)
+    gates.record(who, draft, lead.id, "linkedin", launched=True)
     task = asyncio.create_task(_confirm(draft.id, container, target, state != "none"))
     _confirmations.add(task)
     task.add_done_callback(_confirmations.discard)

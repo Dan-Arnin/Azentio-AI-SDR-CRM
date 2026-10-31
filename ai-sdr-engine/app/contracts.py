@@ -161,6 +161,8 @@ class Assessment(BaseModel):
     competitors: list[dict[str, Any]] = Field(default_factory=list)
     buyingSignals: list[dict[str, Any]] = Field(default_factory=list)
     mode: Literal["live", "fixture"] = "live"
+    droppedQuotes: list[dict[str, Any]] = Field(default_factory=list)  # proposed excerpts not found verbatim in the reply
+    injectionExcerpt: Optional[str] = None  # set when the reply tried to instruct the system; scores were left unchanged
     createdAt: str = Field(default_factory=now_iso)
 
 

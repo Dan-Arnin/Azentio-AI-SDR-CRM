@@ -12,6 +12,7 @@ import time
 from typing import Any, Awaitable, Callable, Optional
 from uuid import uuid4
 
+from app import sqlstore
 from app import config
 
 Execute = Callable[[str, Optional[str], str, dict[str, Any]], Awaitable[Any]]
@@ -66,7 +67,7 @@ class JobRunner:
     # Use independent connections and immediate transactions to serialize claims across processes.
     @contextmanager
     def _tx(self):
-        conn = sqlite3.connect(self.path, timeout=10, isolation_level=None)
+        conn = sqlstore.connect(self.path, timeout=10, isolation_level=None)
         conn.row_factory = sqlite3.Row
         try:
             conn.execute('PRAGMA busy_timeout=10000')

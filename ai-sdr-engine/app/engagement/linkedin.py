@@ -66,7 +66,7 @@ async def draft_note(lead: Lead, theme: Optional[str] = None, enrollment_id: Opt
     finally:
         calllog.unbind(token)
     note = URL_RE.sub("", note).strip()[:MAX_CHARS]
-    flags = check_guardrails(SUBJECT, note, claim_ids)
+    flags = check_guardrails(SUBJECT, note, claim_ids, channel="linkedin")
     draft = Draft(leadId=lead.id, kind="linkedin_note", to=f"LinkedIn: {lead.input.fullName}", subject=SUBJECT, body=note,
                   nextAction="Send this note manually on LinkedIn after approval", claimIds=claim_ids, guardrailFlags=flags,
                   status="BLOCKED" if {"pricing", "sla_commitment"} & set(flags) else "DRAFT", contentHash=content_hash(SUBJECT, note),
@@ -87,8 +87,9 @@ def mark_sent(draft: Draft, lead: Lead, by: str = "sales.ops") -> Message:
             return existing[0]
     if draft.status != "APPROVED":
         raise ValueError("not_approved")
-    if lead.suppressed or lead.input.contactPermission == "denied":
-        raise ValueError("contact_blocked")
+    from app.governance.gates import blocked_reason
+    if blocked := blocked_reason(draft, lead):
+        raise ValueError(blocked)
     msg = Message(leadId=lead.id, threadId=lead.threadId, direction="outbound", subject="LinkedIn connection request",
                   body=draft.body, draftId=draft.id, enrollmentId=draft.enrollmentId, origin="simulated", transport="simulated",
                   deliveryStatus="simulated", intendedTo=f"LinkedIn: {lead.input.fullName}")

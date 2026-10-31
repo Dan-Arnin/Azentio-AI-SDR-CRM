@@ -11,6 +11,7 @@ import time
 from urllib.parse import urlsplit
 from uuid import uuid4
 
+from app import sqlstore
 from app import config
 from app.contracts import LeadInput
 from app.engagement.resend_mcp import EmailTransportError, ResendMCPTransport, _mailbox
@@ -63,7 +64,7 @@ class NotificationWorker:
     # Serialize claims across server processes and always close SQLite connections.
     @contextmanager
     def _tx(self):
-        conn = sqlite3.connect(self.path, timeout=15, isolation_level=None)
+        conn = sqlstore.connect(self.path, timeout=15, isolation_level=None)
         conn.row_factory = sqlite3.Row
         try:
             conn.execute('BEGIN IMMEDIATE')

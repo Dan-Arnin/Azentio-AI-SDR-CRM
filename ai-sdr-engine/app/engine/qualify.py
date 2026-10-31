@@ -308,6 +308,25 @@ def _merge_signals(prior: Optional[Assessment], ext: Extraction) -> list[dict[st
 
 # Assess a buyer reply: extraction + decision in parallel, deterministic merge, scoring and routing
 async def assess_reply(lead: Lead, reply: Message, thread: list[Message], prior: Optional[Assessment]) -> Assessment:
+    from app.governance.guardrails import injection_excerpt, record_injection
+
+    injected = None if UNSUBSCRIBE_RE.search(reply.body) else injection_excerpt(reply.body)
+    if injected:
+        # Never let instructions inside a reply move the score: keep the prior view and hand the reply to a person
+        record_injection(lead.id, reply.id, injected)
+        keep = prior.model_copy() if prior else None
+        return Assessment(
+            leadId=lead.id, leadVersion=lead.version,
+            policyVersion=lead.icp.policyVersion if lead.icp else config.POLICY_VERSION, icp=lead.icp,
+            replyIntent="other", intentConfidence=0.0, bant=keep.bant if keep else _baseline_bant(lead),
+            bantScore=keep.bantScore if keep else 0, qualificationScore=keep.qualificationScore if keep else 0,
+            missingFields=keep.missingFields if keep else list(BANT_KEYS), route="human_review",
+            routeReasons=["Reply contains instructions aimed at the system; nothing in it was acted on and the score is unchanged."],
+            nextAction="SDR: read the reply yourself and respond personally",
+            decision=DecisionResult(provider="rule", model="injection-guard", intent="other", intentConfidence=0.0,
+                                    rationale="Hidden-instruction pattern detected; no model call made."),
+            mode="live", injectionExcerpt=injected[:200],
+        )
     if UNSUBSCRIBE_RE.search(reply.body):
         ext = fixture_extract(reply)
         decision = DecisionResult(provider="rule", model="unsubscribe-keywords", intent="unsubscribe", intentConfidence=1.0,
@@ -362,4 +381,5 @@ async def assess_reply(lead: Lead, reply: Message, thread: list[Message], prior:
         route=route, routeReasons=reasons, nextQuestion=next_question,
         nextAction=_next_action(route, decision, ext, nq_key, strength, objections), decision=decision,
         intentStrength=strength, objections=objections, competitors=competitors, buyingSignals=signals, mode=mode,
+        droppedQuotes=[{"field": d.field, "excerpt": d.excerpt[:200], "reason": d.reason} for d in ext.dropped],
     )

@@ -8,6 +8,7 @@ from typing import Any, Optional, Type, TypeVar
 
 from pydantic import BaseModel
 
+from app import sqlstore
 from app.config import DB_PATH
 
 T = TypeVar("T", bound=BaseModel)
@@ -27,7 +28,7 @@ def conn() -> sqlite3.Connection:
     with _lock:
         if _conn is None:
             DB_PATH.parent.mkdir(parents=True, exist_ok=True)
-            _conn = sqlite3.connect(DB_PATH, check_same_thread=False)
+            _conn = sqlstore.connect(DB_PATH, check_same_thread=False)
             for k in KINDS:
                 _conn.execute(
                     f"CREATE TABLE IF NOT EXISTS {k} (id TEXT PRIMARY KEY, lead_id TEXT, "
@@ -87,6 +88,15 @@ def _dig(d: Any, path: str) -> Any:
             return None
         d = d.get(part)
     return d
+
+
+# Remove one record (used by erasure to replace a plaintext suppression entry with its hash)
+def delete(kind: str, id_: str) -> None:
+    if kind not in KINDS:
+        raise ValueError(f"unknown kind {kind}")
+    with _lock:
+        conn().execute(f"DELETE FROM {kind} WHERE id=?", (id_,))
+        conn().commit()
 
 
 # Drop every table (demo reset)

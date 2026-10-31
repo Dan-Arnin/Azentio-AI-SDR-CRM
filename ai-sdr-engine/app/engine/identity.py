@@ -1,6 +1,7 @@
 # app/engine/identity.py - Lead identity resolution (dedupe, conflicts, existing opportunity) and consent checks
 from __future__ import annotations
 
+import hashlib
 import json
 import re
 from functools import lru_cache
@@ -122,9 +123,13 @@ def is_suppressed(email: str) -> Optional[str]:
     for row in _crm()["suppressions"]:
         if normalize_email(row["email"]) == e:
             return row.get("reason", "suppressed")
+    hashed = "sha256:" + hashlib.sha256(e.encode()).hexdigest()
+    domain = "@" + e.rpartition("@")[2]
     for row in db.list_("suppressions", _SuppressionRow, limit=100000):
         d = row.model_dump()
-        if normalize_email(str(d.get("email") or d.get("normalizedEmail") or "")) == e:
+        value = str(d.get("email") or d.get("normalizedEmail") or "")
+        # exact email, a blocked domain ("@bank.com") or an erased contact kept only as a hash
+        if normalize_email(value) == e or value.lower() == domain or value == hashed:
             return str(d.get("reason") or "suppressed")
     return None
 

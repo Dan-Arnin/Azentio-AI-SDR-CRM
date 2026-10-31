@@ -7,13 +7,14 @@ import json
 from typing import Any, AsyncIterator, Awaitable, Callable, Optional, TypeVar
 
 from fastapi.responses import HTMLResponse
-from fastapi import APIRouter, File, Form, Header, UploadFile
+from fastapi import APIRouter, File, Form, Header, Request, UploadFile
 from fastapi.responses import JSONResponse, StreamingResponse
 from pydantic import BaseModel, ValidationError
 
 from app import db, events, pipeline
 from app.contracts import CampaignInput, Draft, LeadInput, ReplyInput, Task, TaskStatus, new_id
 from app.crm import mock_crm, outbox
+from app.governance import auth as gov_auth, store as gov_store
 
 router = APIRouter(prefix="/v1")
 
@@ -193,7 +194,7 @@ def list_drafts(status: Optional[str] = None, leadId: Optional[str] = None) -> d
 
 # Edit a draft (creates a new version and invalidates prior approval)
 @router.patch("/drafts/{draft_id}", tags=["drafts"])
-async def edit_draft(draft_id: str, req: DraftEdit) -> Any:
+async def edit_draft(draft_id: str, req: DraftEdit, request: Request) -> Any:
     from app.engagement.approvals import edit_draft as do_edit
 
     draft = draft_or_404(draft_id)
@@ -201,6 +202,9 @@ async def edit_draft(draft_id: str, req: DraftEdit) -> Any:
         return draft
     result = guarded(do_edit, draft, req.subject, req.body)
     if not isinstance(result, JSONResponse):
+        gov_store.audit(*gov_auth.actor(request, "reviewer"), "draft.edited", "draft", draft.id, draft.leadId,
+                        before={"version": draft.version, "subject": draft.subject, "flags": draft.guardrailFlags},
+                        after={"version": result.version, "subject": result.subject, "flags": result.guardrailFlags})
         events.publish("draft.edited", result.leadId, {"draftId": result.id, "version": result.version,
                                                        "summary": f"draft edited -> v{result.version}"})
     return result
@@ -208,14 +212,17 @@ async def edit_draft(draft_id: str, req: DraftEdit) -> Any:
 
 # Approve a draft for sending (contentHash must match the reviewed version)
 @router.post("/drafts/{draft_id}/approve", tags=["drafts"])
-async def approve(draft_id: str, req: ApproveRequest) -> Any:
+async def approve(draft_id: str, req: ApproveRequest, request: Request) -> Any:
     from app.engagement.approvals import approve_draft
 
     draft = draft_or_404(draft_id)
     if isinstance(draft, JSONResponse):
         return draft
-    result = guarded(approve_draft, draft, req.reviewer, req.contentHash)
+    who, role = gov_auth.actor(request, req.reviewer)
+    result = guarded(approve_draft, draft, who if role != "not_signed_in" else req.reviewer, req.contentHash)
     if not isinstance(result, JSONResponse):
+        gov_store.audit(who, role, "draft.approved", "draft", draft.id, draft.leadId, before={"status": draft.status},
+                        after={"status": result.status, "version": result.version, "contentHash": result.contentHash})
         events.publish("draft.approved", result.leadId, {"draftId": result.id, "reviewer": req.reviewer,
                                                          "summary": f"{result.kind} approved by {req.reviewer}"})
     return result
@@ -223,7 +230,7 @@ async def approve(draft_id: str, req: ApproveRequest) -> Any:
 
 # Reject a draft
 @router.post("/drafts/{draft_id}/reject", tags=["drafts"])
-async def reject(draft_id: str, req: RejectRequest) -> Any:
+async def reject(draft_id: str, req: RejectRequest, request: Request) -> Any:
     from app.engagement.approvals import reject_draft
 
     draft = draft_or_404(draft_id)
@@ -231,6 +238,8 @@ async def reject(draft_id: str, req: RejectRequest) -> Any:
         return draft
     result = guarded(reject_draft, draft, req.reason)
     if not isinstance(result, JSONResponse):
+        gov_store.audit(*gov_auth.actor(request, "reviewer"), "draft.rejected", "draft", draft.id, draft.leadId,
+                        before={"status": draft.status}, after={"status": result.status}, detail=req.reason)
         events.publish("draft.rejected", result.leadId, {"draftId": result.id, "reason": req.reason,
                                                          "summary": f"{result.kind} rejected: {req.reason}"})
     return result
@@ -251,8 +260,8 @@ def preview_draft(draft_id: str) -> HTMLResponse:
 
 # Send an approved draft through the configured email transport
 @router.post("/drafts/{draft_id}/send", tags=["drafts"])
-async def send(draft_id: str) -> Any:
-    return await aguarded(pipeline.send_draft(draft_id))
+async def send(draft_id: str, request: Request) -> Any:
+    return await aguarded(pipeline.send_draft(draft_id, actor=gov_auth.actor(request, "reviewer")))
 
 
 # ---------------------------------------------------------------- campaigns + clock
@@ -260,12 +269,17 @@ async def send(draft_id: str) -> Any:
 
 # Create an outbound campaign: cohort -> enrollments -> touch drafts awaiting approval
 @router.post("/campaigns", status_code=201, tags=["campaigns"])
-async def create_campaign(inp: CampaignInput) -> Any:
+async def create_campaign(inp: CampaignInput, request: Request) -> Any:
     from app.api.campaign_channels import schedule_channel_drafts
     result = await aguarded(pipeline.create_campaign(inp))
-    cid = result.get("id") or (result.get("campaign") or {}).get("id") if isinstance(result, dict) else None
-    if cid and any(ch != "email" for ch in inp.channels):
-        schedule_channel_drafts(cid, list(inp.channels))
+    if isinstance(result, dict):
+        c = result.get("campaign") or result
+        cid = c.id if hasattr(c, "id") else c.get("id")
+        if cid and any(ch != "email" for ch in inp.channels):
+            schedule_channel_drafts(cid, list(inp.channels))
+        gov_store.audit(*gov_auth.actor(request, "workspace user"), "campaign.launched", "campaign", cid,
+                        after={"name": inp.name, "cohort": inp.cohort.model_dump(), "touchDays": inp.touchDays,
+                               "channels": list(inp.channels), "enrolled": len(result.get("enrollments") or [])})
     return result
 
 
@@ -309,9 +323,11 @@ async def advance_clock(req: ClockRequest) -> Any:
 
 # Wipe every store: database, clock offset, mock CRM and the recent-event buffer
 @router.post("/demo/reset", tags=["demo"])
-def reset() -> dict[str, Any]:
+def reset(request: Request) -> dict[str, Any]:
     from app.engagement import clock
 
+    gov_store.audit(*gov_auth.actor(request, "workspace user"), "demo.reset", "workspace", None,
+                    detail="Workspace data cleared; the audit log is kept.")
     db.reset()
     clock.reset()
     mock_crm.clear()

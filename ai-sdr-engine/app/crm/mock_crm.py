@@ -10,6 +10,7 @@ from typing import Any, Optional
 from fastapi import APIRouter, Request
 from fastapi.responses import JSONResponse
 
+from app import sqlstore
 from app import config
 from app.contracts import now_iso
 
@@ -18,7 +19,7 @@ router = APIRouter(prefix="/mock-crm", tags=["mock-crm"])
 # Open an independent durable projection connection on the canonical application DB.
 def _connection():
     config.DB_PATH.parent.mkdir(parents=True, exist_ok=True)
-    conn = sqlite3.connect(config.DB_PATH, timeout=10)
+    conn = sqlstore.connect(config.DB_PATH, timeout=10)
     conn.row_factory = sqlite3.Row
     conn.execute("PRAGMA busy_timeout=10000")
     conn.execute("PRAGMA journal_mode=WAL")

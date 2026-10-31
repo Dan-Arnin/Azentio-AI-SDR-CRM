@@ -65,7 +65,7 @@ cd backend && TEST_DATABASE_URL=postgresql://sdr:sdr@localhost:5433/sdr_test pyt
 
 Free-tier behaviour to plan around:
 - Services sleep after 15 minutes idle; the first request takes 30–60 s. Open both `/health` URLs a few minutes before presenting.
-- The engine stores data in SQLite on Render's temporary disk, so its records reset on every redeploy or restart. Re-run the demo flow after deploying. The backend's data lives in Neon and persists.
+- Both services keep their data in Neon: the backend in the `public` schema, the engine in the `engine` schema (`ENGINE_DATABASE_URL`, copied from the backend's `DATABASE_URL` by the Blueprint). Data survives deploys, restarts and sleep. Locally, without `ENGINE_DATABASE_URL`, the engine uses SQLite as before.
 - Leave `EMAIL_TRANSPORT=simulated` unless sends are restricted to the controlled `DEMO_INBOX`.
 
 Test the backend image locally exactly as Render runs it: `docker build -f backend/Dockerfile .` (build from the repo root).
@@ -138,6 +138,10 @@ The engine pushes every lead, draft, send, reply, assessment and handoff as a si
 Rules: snapshots only move forward by the engine's lead `version` (events may arrive out of order); a lead is **outbound** once it comes from a target-account source or is enrolled in a campaign sequence; accounts are matched by domain and never created from personal mailboxes; the first handoff on an account makes the routed AE its owner, so later leads from that bank go to the same AE.
 
 Tests replay 40 real events captured from the engine (`fixtures/engine_crm_events.jsonl`, signed with `test-secret`).
+
+## Trust & governance page
+
+`/console/trust` in the engine: six headline tiles, seven panels, the audit log and the controls register, each figure linked to its records. Sales Manager and Portal Admin see the whole page; an SDR sees only their own summary (checked on the server). Details: [ai-sdr-engine/docs/GOVERNANCE.md](ai-sdr-engine/docs/GOVERNANCE.md). Sign-in uses the demo password in `CONSOLE_PASSWORD` (Render generates it on the engine service).
 
 ## Next steps by owner
 

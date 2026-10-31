@@ -9,6 +9,7 @@ from typing import Literal, Optional
 from fastapi import APIRouter, Header
 from fastapi.responses import JSONResponse
 
+from app import sqlstore
 from app import config, pipeline, enquiry_notifications
 from app.contracts import LeadInput, now_iso
 
@@ -21,7 +22,7 @@ class PublicEnquiry(LeadInput):
 
 # Open a short-lived receipt connection in the same canonical database.
 def receipts() -> sqlite3.Connection:
-    conn = sqlite3.connect(config.DB_PATH, timeout=15)
+    conn = sqlstore.connect(config.DB_PATH, timeout=15)
     conn.row_factory = sqlite3.Row
     conn.execute("""CREATE TABLE IF NOT EXISTS public_enquiry_receipts (
         request_key TEXT PRIMARY KEY, fingerprint TEXT NOT NULL, lead_id TEXT NOT NULL,

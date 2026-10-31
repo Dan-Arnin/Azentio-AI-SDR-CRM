@@ -19,7 +19,7 @@ from app.llm.client import structured
 SENDER = (f"Azentio {config.SENDER_TITLE} team" if "team" in config.SENDER_NAME.lower()
           else f"{config.SENDER_NAME}\n{config.SENDER_TITLE} | Azentio") + "\nazentio.com"
 OPT_OUT_LINE = 'Prefer not to hear from us? Reply "unsubscribe" and we will not email you again.'
-BLOCKING_FLAGS = {"pricing", "sla_commitment"}
+BLOCKING_FLAGS = {"pricing", "sla_commitment", "overclaim", "regulator_claim", "outside_link", "missing_opt_out"}
 BANT_ORDER = ("need", "timeline", "authority", "budget")
 OBJECTION_ACK = {
     "price": "Budget pressure is real this year, so a phased first step that a specialist scopes with you may be the sensible place to start.",
@@ -58,6 +58,20 @@ MEETING_RE = re.compile(
     re.IGNORECASE,
 )
 NUMERIC_RE = re.compile(r"\b\d+(\.\d+)?\s*(%|x\b|percent|times faster)", re.IGNORECASE)
+# Absolute outcome claims no product can honestly make
+OVERCLAIM_RE = re.compile(
+    r"\b(100\s*%\s*(compliant|accurate|accuracy|detection|automated)|zero false positives|never miss\w*|eliminat\w+ (all )?(fraud|risk|false positives)|"
+    r"fully compliant|completely compliant|risk[- ]free|bullet[- ]?proof|foolproof)\b",
+    re.IGNORECASE,
+)
+# Claims that a regulator approved, endorsed or certified us
+REGULATOR_RE = re.compile(
+    r"\b(approved|endorsed|certified|mandated|recommended|accredited|sanctioned) by (the )?"
+    r"(central bank|regulators?|SAMA|CBUAE|CBB|QCB|CBK|RBI|SEBI|FATF|MAS|FCA|BNM|DFSA|ADGM)\b"
+    r"|\b(SAMA|CBUAE|RBI|FATF|MAS|FCA)[- ](approved|certified|endorsed)\b",
+    re.IGNORECASE,
+)
+LINK_RE = re.compile(r"\b(https?://|www\.)([\w.-]+)", re.IGNORECASE)
 CLICHE_RE = re.compile(
     r"\b(hope (this|you) (email )?finds? you|reaching out|touch base|circle back|just following up|i wanted to|"
     r"thank(s| you) for (reaching out|your interest|sharing)|appreciate you sharing|you shared that|"
@@ -286,7 +300,7 @@ def content_hash(subject: str, body: str) -> str:
 
 
 # Regex guardrails: pricing, SLA/commitments, meeting promises, numeric claims, unknown claim ids
-def check_guardrails(subject: str, body: str, claim_ids: list[str]) -> list[str]:
+def check_guardrails(subject: str, body: str, claim_ids: list[str], channel: str = "email") -> list[str]:
     text = f"{subject}\n{body}"
     flags: list[str] = []
     if PRICING_RE.search(text):
@@ -297,6 +311,15 @@ def check_guardrails(subject: str, body: str, claim_ids: list[str]) -> list[str]
         flags.append("meeting_promise")
     if NUMERIC_RE.search(text):
         flags.append("numeric_claim")
+    if OVERCLAIM_RE.search(text):
+        flags.append("overclaim")
+    if REGULATOR_RE.search(text):
+        flags.append("regulator_claim")
+    if any(not m.group(2).lower().rstrip(".").endswith("azentio.com") for m in LINK_RE.finditer(text)):
+        flags.append("outside_link")
+    # each channel carries its own opt-out: the email footer, or "Reply STOP" in a text; LinkedIn notes have none
+    if (channel == "email" and OPT_OUT_LINE not in body) or (channel == "text" and "reply stop" not in body.lower()):
+        flags.append("missing_opt_out")
     known = claim_index()
     if any(cid not in known for cid in claim_ids):
         flags.append("unsupported_claim")

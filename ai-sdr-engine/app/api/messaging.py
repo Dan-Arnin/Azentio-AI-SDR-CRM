@@ -4,7 +4,7 @@ from __future__ import annotations
 import re
 from typing import Any, Literal, Optional
 
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, Request
 from pydantic import BaseModel
 
 from app import config, db
@@ -88,7 +88,7 @@ async def compose_sms(lead: Lead, style_id: Optional[str] = None, persist: bool 
     text = OPT_OUT_RE.sub("Reply STOP to opt out.", URL_RE.sub("", text)).strip()[:MAX_CHARS]
     if "STOP" not in text:
         text = (text[:MAX_CHARS - 25].rstrip() + " Reply STOP to opt out.")
-    flags = check_guardrails(SUBJECT, text, ids)
+    flags = check_guardrails(SUBJECT, text, ids, channel="text")
     label = "WhatsApp" if channel == "whatsapp" else "Text"
     draft = Draft(leadId=lead.id, kind="sms_message", to=f"{label}: {lead.input.fullName}", subject=SUBJECT, body=text,
                   nextAction=f"Send on {label} after approval" if enrollment_id else "Send as SMS or WhatsApp after approval",
@@ -102,7 +102,7 @@ async def compose_sms(lead: Lead, style_id: Optional[str] = None, persist: bool 
 
 # Send an approved text via Twilio to the controlled test number and record it in the conversation
 @router.post("/drafts/{draft_id}/send-sms")
-async def send_sms(draft_id: str, body: SendInput) -> Any:
+async def send_sms(draft_id: str, body: SendInput, request: Request) -> Any:
     from app import pipeline
     from app.integrations.twilio_client import TwilioError, send
     draft = db.get("drafts", draft_id, Draft)
@@ -114,8 +114,11 @@ async def send_sms(draft_id: str, body: SendInput) -> Any:
         return existing[0]
     if draft.status != "APPROVED" or draft.contentHash != content_hash(draft.subject, draft.body):
         raise HTTPException(409, detail={"code": "not_approved"})
-    if lead.suppressed or lead.input.contactPermission == "denied":
-        raise HTTPException(409, detail={"code": "contact_blocked"})
+    from app.governance import auth as gov_auth, gates
+    who = gov_auth.actor(request, "reviewer")
+    if blocked := gates.blocked_reason(draft, lead):
+        gates.record(who, draft, lead.id, body.channel, blocked=blocked)
+        raise HTTPException(409, detail={"code": blocked})
     from app.integrations import callmebot, meta_whatsapp
     try:
         if body.channel == "whatsapp" and meta_whatsapp.configured():
@@ -132,5 +135,6 @@ async def send_sms(draft_id: str, body: SendInput) -> Any:
                   deliveryStatus="accepted" if live else "simulated", providerMessageId=sid, deliveredTo=to, intendedTo=lead.input.phone or lead.input.fullName)
     db.put("messages", msg)
     db.put("drafts", draft.model_copy(update={"status": "SIMULATED_SENT", "nextAction": "Message sent"}))
+    gates.record(who, draft, lead.id, body.channel, message_id=msg.id)
     pipeline.emit("message.sent", lead, messageId=msg.id, draftId=draft.id, kind="sms_message", channel=body.channel, subject=msg.subject)
     return msg

@@ -22,6 +22,7 @@ from urllib.parse import urlsplit
 
 from pydantic import BaseModel, ConfigDict
 
+from app import sqlstore
 from app import config
 from app.contracts import Enrichment, Evidence, LeadInput
 
@@ -223,7 +224,7 @@ def company_domain(inp: LeadInput) -> str | None:
 def _cache_connection() -> sqlite3.Connection:
     path = Path(config.DB_PATH)
     path.parent.mkdir(parents=True, exist_ok=True)
-    connection = sqlite3.connect(path, timeout=10)
+    connection = sqlstore.connect(path, timeout=10)
     connection.execute("CREATE TABLE IF NOT EXISTS public_company_cache (domain TEXT PRIMARY KEY, fetched_at REAL NOT NULL, payload TEXT NOT NULL)")
     return connection
 

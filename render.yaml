@@ -24,7 +24,8 @@ services:
       - key: ENGINE_URL # engine base URL, e.g. https://azentio-sdr-engine.onrender.com (used by POST /v1/crm/resync)
         sync: false
 
-  # AI SDR engine (contact form, sales workspace, /v1 workflow API). Keeps its own SQLite file.
+  # AI SDR engine (contact form, sales workspace, /v1 workflow API). Stores its data in Neon (schema "engine"),
+  # so leads, drafts and campaigns survive deploys, restarts and sleep. Without ENGINE_DATABASE_URL it falls back to SQLite.
   - type: web
     name: azentio-sdr-engine
     runtime: python
@@ -37,6 +38,13 @@ services:
     envVars:
       - key: PYTHON_VERSION
         value: 3.12.7
+      - key: ENGINE_DATABASE_URL # same Neon database as the backend; engine tables live in their own schema
+        fromService:
+          type: web
+          name: azentio-sdr-backend
+          envVarKey: DATABASE_URL
+      - key: ENGINE_DB_SCHEMA
+        value: engine
       - key: OPENAI_API_KEY # optional: without it the engine runs in fixture mode and routes more leads to human review
         sync: false
       - key: LLM_BACKEND
@@ -53,6 +61,10 @@ services:
         sync: false
       - key: CRM_WEBHOOK_URL # backend URL + /v1/crm/events, e.g. https://azentio-sdr-backend.onrender.com/v1/crm/events
         sync: false
+      - key: CONSOLE_PASSWORD # demo sign-in for the Trust page (Render generates it: Environment tab -> reveal, share with judges)
+        generateValue: true
+      - key: SESSION_SECRET # signs console sessions
+        generateValue: true
       - key: CRM_WEBHOOK_SECRET
         fromService:
           type: web

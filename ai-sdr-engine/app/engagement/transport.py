@@ -45,16 +45,22 @@ def _existing_message(draft_id: str) -> Message | None:
 
 # Run every send gate; raise ValueError(code) on the first failure
 def check_send_gates(draft: Draft, lead: Lead) -> None:
+    from app.engine.identity import is_suppressed
+    from app.governance import store
+
     if draft.kind == "linkedin_note":
         raise ValueError("linkedin_manual_step")
     if draft.kind == "sms_message":
         raise ValueError("sms_uses_messaging_send")
-    if lead.suppressed or lead.input.contactPermission != "allowed":
+    # the suppression list is checked live, so entries added after intake (domain blocks, erasures) still stop the send
+    if lead.suppressed or lead.input.contactPermission != "allowed" or is_suppressed(lead.normalizedEmail):
         raise ValueError("contact_blocked")
     if draft.enrollmentId:
         enr = db.get("enrollments", draft.enrollmentId, Enrollment)
         if not enr or enr.state != "ACTIVE":
             raise ValueError("sequence_stopped")
+        if enr.campaignId in store.paused_campaigns():
+            raise ValueError("campaign_paused")
     stored = db.get("drafts", draft.id, Draft)
     if (draft.contentHash != content_hash(draft.subject, draft.body)
             or (stored and stored.contentHash != draft.contentHash)):

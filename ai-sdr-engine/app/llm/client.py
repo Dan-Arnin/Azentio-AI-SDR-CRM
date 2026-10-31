@@ -25,6 +25,8 @@ class LLMUnavailable(RuntimeError):
 # Build an AsyncOpenAI client for the configured backend (re-reads Codex auth each call so refreshed tokens are picked up)
 def make_client() -> AsyncOpenAI:
     if config.LLM_BACKEND == "api_key":
+        if not config.OPENAI_API_KEY:
+            raise LLMUnavailable("OPENAI_API_KEY is not set")  # callers fall back to templates and rules
         return AsyncOpenAI(api_key=config.OPENAI_API_KEY)
     try:
         tokens = json.loads(config.CODEX_AUTH_PATH.read_text())["tokens"]
@@ -78,7 +80,8 @@ async def run_agent(agent: Agent, user_input: str | list[dict[str, Any]], max_tu
         async for _ in result.stream_events():
             pass
     except Exception as exc:
-        calllog.record(agent.name, "openai_agents_sdk", _model_name(agent), started, ok=False, error=type(exc).__name__)
+        calllog.record(agent.name, "openai_agents_sdk", _model_name(agent), started, ok=False, error=type(exc).__name__,
+                       fields=calllog.field_names(user_input))
         raise LLMUnavailable(f"{type(exc).__name__}: {str(exc)[:300]}") from exc
     usage = None
     try:
@@ -86,7 +89,7 @@ async def run_agent(agent: Agent, user_input: str | list[dict[str, Any]], max_tu
         usage = {"input_tokens": u.input_tokens, "output_tokens": u.output_tokens, "requests": u.requests}
     except Exception:
         pass
-    calllog.record(agent.name, "openai_agents_sdk", _model_name(agent), started, usage=usage)
+    calllog.record(agent.name, "openai_agents_sdk", _model_name(agent), started, usage=usage, fields=calllog.field_names(user_input))
     meta = {
         "model": _model_name(agent),
         "backend": config.LLM_BACKEND,
