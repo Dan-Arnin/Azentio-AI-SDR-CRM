@@ -45,6 +45,12 @@ services:
         value: simulated
       - key: DEMO_MODE
         value: "true"
+      - key: SDR_PUBLIC_BASE_URL # this service's own URL, used for workspace links in enquiry notification emails
+        sync: false
+      - key: ENRICHMENT_PROVIDER # demo profiles; set to apollo (plus APOLLO_API_KEY) for live lookups of real domains
+        value: demo
+      - key: APOLLO_API_KEY # optional
+        sync: false
       - key: CRM_WEBHOOK_URL # backend URL + /v1/crm/events, e.g. https://azentio-sdr-backend.onrender.com/v1/crm/events
         sync: false
       - key: CRM_WEBHOOK_SECRET
