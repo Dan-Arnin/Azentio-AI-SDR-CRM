@@ -6,6 +6,8 @@ import time
 from typing import Any, Literal, Optional
 
 import httpx
+
+from app.llm import calllog
 from pydantic import BaseModel
 
 from app import config
@@ -197,8 +199,10 @@ async def _openai_decisions(reply_text: str, spans: dict[str, str | None]) -> De
             headers={"Authorization": f"Bearer {config.OPENAI_API_KEY}", "Content-Type": "application/json"},
         )
     if resp.status_code >= 400:
+        calllog.record("reply_judgment", "openai_decisions_api", body.get("model", ""), started, ok=False, error=f"HTTP {resp.status_code}")
         raise RuntimeError(f"Decisions API HTTP {resp.status_code}: {resp.text[:300]}")
     data = resp.json()
+    calllog.record("reply_judgment", "openai_decisions_api", body.get("model", ""), started, usage=data.get("usage"))
     answers = {a.get("name"): a for a in data.get("answers", []) if isinstance(a, dict)}
     intent_ans = answers.get("intent") or {}
     refusal = intent_ans.get("type") == "refusal" or not intent_ans

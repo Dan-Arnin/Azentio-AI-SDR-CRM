@@ -27,6 +27,9 @@ def env(name: str, default: str = "") -> str:
 
 
 OPENAI_API_KEY = env("OPENAI_API_KEY")
+APOLLO_API_KEY = env("APOLLO_API_KEY")
+ENRICHMENT_PROVIDER = env("ENRICHMENT_PROVIDER", "apollo" if APOLLO_API_KEY else "demo")
+APOLLO_PEOPLE_ENRICHMENT = env("APOLLO_PEOPLE_ENRICHMENT", "false").lower() == "true"
 LLM_BACKEND = env("LLM_BACKEND", "api_key" if OPENAI_API_KEY else "chatgpt")
 CODEX_AUTH_PATH = Path(env("CODEX_AUTH_PATH", str(Path.home() / ".codex" / "auth.json")))
 CHATGPT_BASE_URL = env("CHATGPT_BASE_URL", "https://chatgpt.com/backend-api/codex")

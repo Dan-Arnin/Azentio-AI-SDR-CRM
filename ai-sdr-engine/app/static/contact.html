@@ -194,11 +194,51 @@
         $("enquiry-confirmation").hidden = true; $("enquiry-form").hidden = false; $("firstName").focus();
       });
       // Fill a controlled example without recording consent or submitting it.
+      const EX_FIRST = ["Layla", "Omar", "Fatima", "Yusuf", "Mariam", "Khalid", "Noura", "Hassan", "Aisha", "Tariq", "Reem", "Faisal", "Ananya", "Rohan", "Meera", "Arjun", "Huda", "Salim", "Dana", "Karim"];
+      const EX_LAST = ["Haddad", "Al Mansoori", "Rahman", "Al Sayed", "Al Rashid", "Bin Ali", "Qureshi", "Al Qahtani", "Nair", "Mehta", "Iyer", "Al Farsi", "Saleh", "Khoury", "Al Harbi", "Joshi", "Al Busaidi", "Kapoor"];
+      const EX_COMPANIES = [
+        ["Gulf Crescent Bank", "gulfcrescentbank.ae", "AE", ["lending_platform", "aml_compliance"]],
+        ["Al Noor Islamic Bank", "alnoorislamic.com.sa", "SA", ["islamic_banking", "aml_compliance"]],
+        ["Sadeem Islamic Bank", "sadeemislamic.com.bh", "BH", ["islamic_banking"]],
+        ["Doha Meridian Islamic Bank", "dohameridianbank.com.qa", "QA", ["islamic_banking", "aml_compliance"]],
+        ["Riyadh Oasis Bank", "riyadhoasisbank.com.sa", "SA", ["lending_platform", "aml_compliance"]],
+        ["Falaj Islamic Bank", "falajislamic.com.om", "OM", ["islamic_banking"]],
+        ["Sadaf Finance House", "sadaffinance.com.kw", "KW", ["islamic_banking"]],
+        ["Hajar Bank", "hajarbank.com.om", "OM", ["lending_platform"]],
+        ["Deccan Capital Finance", "deccancapitalfin.in", "IN", ["lending_platform"]],
+        ["Sahyadri Credit", "sahyadricredit.in", "IN", ["lending_platform"]],
+        ["Bharat Setu Bank", "bharatsetubank.in", "IN", ["lending_platform", "aml_compliance"]],
+      ];
+      const EX_ROLES = { lending_platform: ["Head of Retail Lending", "Head of Digital Lending", "Chief Credit Officer", "VP Lending Operations", "Chief Operating Officer"],
+        islamic_banking: ["Chief Transformation Officer", "Head of Digital Banking", "Head of Islamic Banking Operations", "Chief Information Officer", "Chief Executive Officer"],
+        aml_compliance: ["Head of Compliance", "Chief Compliance Officer", "Head of Financial Crime", "MLRO", "Head of Transaction Monitoring"] };
+      const EX_INQUIRIES = {
+        lending_platform: ["Our loan approvals take too long and our origination system is end-of-life. We want to understand how Azentio Lending could help us modernise origination and collections.",
+          "We are reviewing our lending platform and would like to discuss loan origination and collections. Vendor evaluation is planned for Q1 2027.",
+          "We want to launch digital SME lending this year and need a platform that covers origination through servicing. Can we arrange a discussion?",
+          "Our collections process is mostly manual. We are exploring a unified lending suite and would like to see what Azentio offers."],
+        islamic_banking: ["We are planning to replace our Islamic core banking system and launch new digital financing products. We would like to understand how iMAL could support this.",
+          "We need a Shariah-compliant core banking platform that connects with our mobile and open banking channels. Please share how iMAL approaches this.",
+          "Our board has approved a core banking modernisation programme for 2027. We are shortlisting Islamic banking platforms and would like a conversation.",
+          "We are expanding our Murabaha and Ijarah products and our current system cannot keep up. Interested in discussing iMAL."],
+        aml_compliance: ["Our transaction monitoring generates too many false-positive alerts and the investigations team is overloaded. We want to understand how AMLOCK could help.",
+          "The regulator has asked us to strengthen sanctions screening and ongoing monitoring. We are evaluating AML platforms this year.",
+          "We want to use AI to prioritise AML alerts and speed up investigations. Could we discuss AMLOCK's approach?",
+          "We are replacing our AML system and need KYC onboarding, screening and regulatory reporting in one place."] };
+      const pick = list => list[Math.floor(Math.random() * list.length)];
+      let lastExample = "";
+      // Fill a fresh random example (demo companies only) without recording consent or submitting it
       $("use-example-details").addEventListener("click", () => {
-        const values = {firstName:"Priya",lastName:"Shah",email:"priya.shah@gulfcrescentbank.ae",role:"Head of Transformation",companyName:"Harbour Bank",country:"AE",productId:"lending_platform",inquiry:"We are reviewing our lending platform and would like to discuss loan origination and collections. Vendor evaluation is planned for Q1 2027."};
-        for (const [field,value] of Object.entries(values)) if ($(field)) $(field).value=value;
-        $("contactPermission").checked=false; $("privacyAccepted").checked=false;
-        idemKey=crypto.randomUUID(); previousPayload="";
+        let first, last, co, key;
+        do { first = pick(EX_FIRST); last = pick(EX_LAST); co = pick(EX_COMPANIES); key = first + last + co[1]; } while (key === lastExample);
+        lastExample = key;
+        const product = pick(co[3]);
+        const slug = (first + "." + last).toLowerCase().replace(/[^a-z.]/g, "");
+        const values = { firstName: first, lastName: last, email: slug + "@" + co[1], role: pick(EX_ROLES[product]), companyName: co[0], companyDomain: co[1],
+          country: co[2], productId: product, phone: "", inquiry: pick(EX_INQUIRIES[product]) };
+        for (const [field, value] of Object.entries(values)) if ($(field)) { $(field).value = value; $(field).dispatchEvent(new Event("input", { bubbles: true })); }
+        $("contactPermission").checked = false; $("privacyAccepted").checked = false;
+        idemKey = crypto.randomUUID(); previousPayload = "";
       });
       applyVariant();
       const pre = PREFILL[params.get("prefill")];

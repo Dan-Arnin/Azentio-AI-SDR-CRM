@@ -14,6 +14,7 @@ from fastapi.staticfiles import StaticFiles
 from app import config, db, jobs, pipeline, reply_routes
 from app.inbox import InboxStore
 from app.inbox_resend import ResendInboxPoller
+from app.enquiry_notifications import NotificationWorker
 from app.api.inbox import router as inbox_router
 from app.api.routes import router as api_router
 from app.api.workspace import router as workspace_router
@@ -54,9 +55,13 @@ async def lifespan(application: FastAPI) -> AsyncIterator[None]:
     application.state.inbox_poller = poller
     runner.start()
     await outbox.start()
+    notifications = NotificationWorker()
+    application.state.notification_worker = notifications
+    notifications.start()
     try:
         yield
     finally:
+        await notifications.stop()
         if poller:
             await poller.stop()
         await runner.stop()

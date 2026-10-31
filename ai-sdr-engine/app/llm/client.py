@@ -11,6 +11,7 @@ from openai.types.shared import Reasoning
 from pydantic import BaseModel
 
 from app import config
+from app.llm import calllog
 
 T = TypeVar("T", bound=BaseModel)
 
@@ -64,6 +65,11 @@ def build_agent(
     )
 
 
+# Model id configured on an agent
+def _model_name(agent: Agent) -> str:
+    return agent.model.model if hasattr(agent.model, "model") else str(agent.model)
+
+
 # Run an agent to completion via streaming (ChatGPT backend is stream-only) and return (output, meta)
 async def run_agent(agent: Agent, user_input: str | list[dict[str, Any]], max_turns: int = 6) -> tuple[Any, dict]:
     started = time.perf_counter()
@@ -72,6 +78,7 @@ async def run_agent(agent: Agent, user_input: str | list[dict[str, Any]], max_tu
         async for _ in result.stream_events():
             pass
     except Exception as exc:
+        calllog.record(agent.name, "openai_agents_sdk", _model_name(agent), started, ok=False, error=type(exc).__name__)
         raise LLMUnavailable(f"{type(exc).__name__}: {str(exc)[:300]}") from exc
     usage = None
     try:
@@ -79,8 +86,9 @@ async def run_agent(agent: Agent, user_input: str | list[dict[str, Any]], max_tu
         usage = {"input_tokens": u.input_tokens, "output_tokens": u.output_tokens, "requests": u.requests}
     except Exception:
         pass
+    calllog.record(agent.name, "openai_agents_sdk", _model_name(agent), started, usage=usage)
     meta = {
-        "model": agent.model.model if hasattr(agent.model, "model") else str(agent.model),
+        "model": _model_name(agent),
         "backend": config.LLM_BACKEND,
         "durationMs": int((time.perf_counter() - started) * 1000),
         "usage": usage,

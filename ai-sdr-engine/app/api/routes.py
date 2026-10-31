@@ -17,6 +17,16 @@ from app.crm import mock_crm, outbox
 
 router = APIRouter(prefix="/v1")
 
+
+@router.get("/enrichment/status", tags=["enrichment"])
+def enrichment_status():
+    from app import config
+    return {"provider": config.ENRICHMENT_PROVIDER, "configured": bool(config.APOLLO_API_KEY),
+            "companyEnrichment": config.ENRICHMENT_PROVIDER == "apollo" and bool(config.APOLLO_API_KEY),
+            "peopleEnrichment": config.APOLLO_PEOPLE_ENRICHMENT,
+            "cacheHours": 6, "syntheticDomainsSkipped": True,
+            "demoProfilesEnabled": config.DEMO_MODE}
+
 T = TypeVar("T")
 
 MAX_IMPORT_ROWS = 100

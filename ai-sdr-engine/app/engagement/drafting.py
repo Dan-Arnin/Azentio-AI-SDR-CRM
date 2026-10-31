@@ -50,12 +50,18 @@ MEETING_RE = re.compile(
 NUMERIC_RE = re.compile(r"\b\d+(\.\d+)?\s*(%|x\b|percent|times faster)", re.IGNORECASE)
 CLICHE_RE = re.compile(
     r"\b(hope (this|you) (email )?finds? you|reaching out|touch base|circle back|just following up|i wanted to|"
-    r"thank(s| you) for (reaching out|your interest)|leverag\w+|synerg\w+|cutting[- ]edge|seamless\w*|robust|"
+    r"thank(s| you) for (reaching out|your interest|sharing)|appreciate you sharing|you shared that|"
+    r"(your|the) (note|enquiry|inquiry|reply) (is|was) (helpful|useful)|leverag\w+|synerg\w+|cutting[- ]edge|seamless\w*|robust|"
     r"game[- ]chang\w+|revolutioni[sz]\w+|unlock\w*|empower\w*|best[- ]in[- ]class|innovative|world[- ]class|"
     r"may be relevant|might be (relevant|worth)|i think|perhaps)\b",
     re.IGNORECASE,
 )
-WRITER_EFFORT = "medium"
+META_RE = re.compile(
+    r"\b(without (assuming|implying|claiming|suggesting)|approved claims?|claim ids?|playbook|rubric|guardrails?|"
+    r"discoveryQuestion|nextAction|KIND_|ICP|enrichment|untrusted|as an AI)\b",
+    re.IGNORECASE,
+)
+WRITER_EFFORT = "low"
 EDITOR_EFFORT = "low"
 EDITOR_TIMEOUT_S = 25
 COMPANY_FACT_KEYS = {"officialCompanyName": "officialName", "name": "name", "industry": "industry", "hq": "headquarters",
@@ -65,8 +71,8 @@ log = logging.getLogger(__name__)
 
 KIND_PLAYBOOK: dict[str, str] = {
     "qualifying_email": (
-        "Website enquiry (stage NEW). Thank them and acknowledge, in your own words, the project and product interest they "
-        "stated. Add at most one or two approved claims relevant to that interest. Ask exactly ONE missing qualification "
+        "Website enquiry (stage NEW). Open by responding to the substance of what they told us (the project and product "
+        "interest), in your own words, with no thank-you. Use one approved claim relevant to that interest. Ask exactly ONE missing qualification "
         "question (use NEXT_QUESTION when given; rephrase lightly). Do not ask for things they already told us. "
         "Next step: their answer helps us bring the right specialist to a conversation."
     ),
@@ -81,7 +87,8 @@ KIND_PLAYBOOK: dict[str, str] = {
         "question about whether the topic is a current priority."
     ),
     "gap_fill": (
-        "Stage QUALIFYING, partial BANT. Briefly acknowledge their latest reply (LAST_REPLY) in your own words. Ask "
+        "Stage QUALIFYING, partial BANT. Respond to the substance of their latest reply (LAST_REPLY) in one natural "
+        "sentence, the way a person would (e.g. agree with the timing they gave); no meta-commentary about their note. Ask "
         "exactly ONE unresolved qualification question (NEXT_QUESTION). Do not repeat questions they already answered. "
         "Keep it under 90 words. Subject should start with 'Re: ' followed by the previous subject if given."
     ),
@@ -149,10 +156,13 @@ INSTRUCTIONS = f"""You draft ONE short, plain-text B2B sales email for the Azent
 
 Writing craft (make it read like a thoughtful senior SDR wrote it by hand for this one person):
 - Open with THEM: the first sentence is about their situation, enquiry, event, role or company, in your own words. Never open with "Thanks for reaching out", "Thank you for reaching out", "I hope this email finds you well", "I am reaching out", "My name is", "I wanted to", "Just following up" or "Thank you for your interest in".
-- Use the most specific context you have: their own words (inquiry or last reply), the event or asset name, their role and what that role is responsible for, and relevant COMPANY_FACTS (e.g. Islamic bank, country). Prefer one precise detail over several generic ones.
+- Respond to what they said rather than describing it back to them: never write "You shared that...", "Thank you for sharing", "Your enquiry gives us..." or "Your note is helpful".
+- Use the most specific context you have: their own words (inquiry or last reply), the event or asset name, their role and what that role is responsible for, and COMPANY_FACTS only when they change the point (e.g. an Islamic bank makes Shari'ah alignment relevant; never mention location or industry just to look personalised). Prefer one precise detail over several generic ones; use the company name at most once and never bolt a company fact onto a generic sentence ("At X in Y, this connects to your remit").
 - One product sentence, expressed as an outcome for someone in their role (what it helps their team do), grounded in one approved claim. Never list features; never paste a claim verbatim if it reads like marketing copy.
 - Plain, warm, calm, confident English. Short sentences. No buzzwords (leverage, synergy, cutting-edge, seamless, robust, game-changer, revolutionise, unlock, empower, best-in-class, transform, innovative, solution), no hedging ("just", "perhaps", "I think", "might be worth"), no exclamation marks, no rhetorical questions.
+- The question asks ONE thing (never "X, and would Y be useful?").
 - End with a low-friction next step written as the single question (e.g. whether a short conversation with a specialist would be useful, or the one qualification question). Make it easy to answer in one line.
+- Never write rules or constraints into the email itself (e.g. "without assuming you attended"); just follow them.
 - The question is the LAST sentence of the message. Any sentence explaining why you ask comes before it, never after.
 - 3 short paragraphs maximum. Target 60-110 words unless the playbook says otherwise.
 - Subject: 3-8 words, specific and calm, sentence case (e.g. "Your lending platform replacement", "AML alert volumes at Riyadh Oasis Bank"). No "Re:" unless the playbook says so, no "Quick question", no colons-as-hooks.
@@ -164,16 +174,21 @@ Follow the KIND_PLAYBOOK for this email."""
 EDITOR_INSTRUCTIONS = f"""You are the senior editor for Azentio's Sales Development Team. You receive the context a writer used (CONTEXT) and the writer's FIRST_DRAFT of one plain-text sales email, plus AUTOMATED_CHECKS. Return the improved email. A human still reviews it before sending.
 
 Rubric (fix every point the draft misses; leave what already works):
-1. Specific to this person, company and source context (their words, event, asset, role, company facts). Remove anything that could be sent unchanged to any bank.
+1. Specific to this person and source context: their own words, the event or asset, what their role is responsible for. Remove anything that could be sent unchanged to any bank. Use a company fact only when it changes the point (e.g. an Islamic bank makes Shari'ah alignment relevant); never add location, industry or the company name just to look personalised.
 2. The first sentence after the greeting is about THEM, not about Azentio or the sender.
-3. Exactly one product sentence, outcome-level for their role, grounded in one approved claim from CONTEXT.APPROVED_CLAIMS. claimIds must list exactly the claims the final text relies on.
-4. Exactly one easy, one-line-answerable question, and it is the final sentence. discoveryQuestion must equal that sentence exactly. Keep the intent of the writer's question (it may be a required qualification question); you may only make it plainer.
-5. 60-110 words in the body (shorter if the KIND_PLAYBOOK sets a lower limit). Cut filler before cutting specifics.
-6. No cliches, buzzwords, hedging, exclamation marks, flattery or rhetorical questions. Natural, calm, human tone; short sentences.
+3. Exactly one product sentence, outcome-level for their role (what it lets their team do), grounded in one approved claim from CONTEXT.APPROVED_CLAIMS. Paraphrase the claim in plain words instead of pasting marketing copy, but never add capabilities, figures or outcomes the claim does not state. claimIds must list exactly the claims the final text relies on.
+4. Exactly one easy, one-line-answerable question that asks ONE thing, and it is the final sentence. discoveryQuestion must equal that sentence exactly. Keep the intent of the writer's question (it may be a required qualification question); you may only make it plainer.
+5. 60-110 words in the body (shorter if the KIND_PLAYBOOK sets a lower limit). Cut filler before cutting specifics. Never pad a short draft: add words only if they carry a specific detail from CONTEXT; otherwise shorter is fine.
+6. No cliches, buzzwords, hedging, exclamation marks, flattery or rhetorical questions. Never use: "Thanks/Thank you for reaching out", "Thank you for your interest", "I hope this finds you well", "I am reaching out", "I wanted to", "just following up", leverage, seamless, robust, cutting-edge, unlock, empower, innovative, best-in-class, "may be relevant", "perhaps", "I think". Natural, calm, human tone; short sentences; no restating their job title back to them ("As Head of X, you..."); no describing their message back to them ("You shared that...", "Thanks for sharing", "Your note is helpful"); company name at most once.
 7. Subject: 3-8 words, specific to them, sentence case. If the draft subject starts with "Re: ", keep the subject exactly as it is.
 8. Keep the greeting line exactly as written. No sign-off or signature (added automatically).
+9. The email is read by the prospect: never write rules, constraints or notes to the reviewer into it (e.g. "without assuming you attended").
 
 {HARD_RULES}
+
+Rewrite sentences freely so the email reads like the STYLE EXAMPLES; do not merely patch words.
+
+{STYLE_EXAMPLES}
 
 changes: up to 5 short notes for the reviewer on what you changed and why (plain language). If nothing needed changing, return the draft unchanged and say so."""
 
@@ -324,8 +339,12 @@ def _enrichment_facts(lead: Lead) -> dict[str, Any]:
                if key not in conflicted and (v := _clean_fact(enr.company.get(key))) is not None}
     if company.get("officialName") and company.get("name") and company["officialName"].startswith(company["name"]):
         company.pop("name")
-    person = {k: v for k in PERSON_FACT_KEYS if (v := _clean_fact(enr.person.get(k))) is not None}
+    if company.get("headquartersCountry") == company.get("headquarters"):
+        company.pop("headquartersCountry", None)
+    person = {k: v for k in PERSON_FACT_KEYS if (v := _clean_fact(enr.person.get(k))) is not None
+              and v.lower() != (lead.input.role or "").lower()}
     origin = ("profile database (unverified mock)" if enr.mock
+              else "Apollo API enrichment (third-party profile, not a buyer statement)" if enr.provider == "apollo"
               else "quoted from official public pages" if enr.found else "supplied by the prospect")
     return {k: v for k, v in {"origin": origin, "company": company, "person": person}.items() if v}
 
@@ -358,8 +377,9 @@ def build_prompt(lead: Lead, kind: str, assessment: Optional[Assessment], theme_
         "KIND": kind,
         "KIND_PLAYBOOK": KIND_PLAYBOOK.get(kind, ""),
         "SENDER": SENDER,
-        "CONTACT": {"firstName": first_name(inp.fullName), "role": _clean_fact(inp.role), "company": inp.companyName,
-                    "country": inp.country, "institutionType": inp.institutionType},
+        "CONTACT": {k: v for k, v in {"firstName": first_name(inp.fullName), "role": _clean_fact(inp.role),
+                                      "company": inp.companyName, "country": inp.country,
+                                      "institutionType": inp.institutionType}.items() if v},
         "PRODUCT_INTEREST": knowledge()["products"].get(inp.productId, {}).get("name", inp.productId),
         "SOURCE": inp.source,
         "COMPANY_FACTS": _enrichment_facts(lead),
@@ -462,7 +482,81 @@ def fixture_draft(lead: Lead, kind: str, theme_key: Optional[str], theme_text: O
     return DraftOut(subject=subj, body=body, discoveryQuestion=q, nextAction=na, claimIds=ids, unresolvedClaims=[])
 
 
-# Draft one stage-aware email for a lead, validate claims, run guardrails, persist and return the Draft
+# Automated quality notes on a draft for the editor (length, question placement, cliches, subject shape)
+def _quality_notes(subject: str, body: str, question: str) -> list[str]:
+    text = _strip_signoff(body)
+    notes: list[str] = []
+    words = len(text.split())
+    if words > 110:
+        notes.append(f"body is {words} words (target 60-110 unless the playbook says shorter)")
+    if text.count("?") != 1:
+        notes.append(f"body has {text.count('?')} question marks (need exactly one)")
+    if not text.endswith("?"):
+        notes.append("the question is not the final sentence")
+    if question.strip() and question.strip() not in text:
+        notes.append("discoveryQuestion does not appear verbatim in the body")
+    hits = sorted({m.group(0).lower() for m in CLICHE_RE.finditer(f"{subject}\n{text}")})
+    if hits:
+        notes.append("cliches, hedging or buzzwords: " + ", ".join(hits))
+    if "!" in text:
+        notes.append("contains an exclamation mark")
+    leaks = sorted({m.group(0) for m in META_RE.finditer(f"{subject}\n{text}")})
+    if leaks:
+        notes.append("internal instructions leaked into the email (remove): " + ", ".join(leaks))
+    if not subject.lower().startswith("re:") and not 3 <= len(subject.split()) <= 8:
+        notes.append(f"subject has {len(subject.split())} words (target 3-8)")
+    return notes or ["no automated issues found"]
+
+
+# Accept the editor's revision only if claims, guardrails and structure all pass; otherwise None
+def _validated_revision(first: DraftOut, rev: EditOut, first_flags: list[str]) -> Optional[DraftOut]:
+    known = claim_index()
+    ids = list(dict.fromkeys(c.strip() for c in rev.claimIds if c.strip()))
+    body, question = rev.body.strip(), rev.discoveryQuestion.strip()
+    first_subject = first.subject.strip()
+    subject = first_subject if first_subject.lower().startswith("re:") else rev.subject.strip()
+    first_had_claims = any(c.strip() in known for c in first.claimIds)
+    new_flags = set(check_guardrails(subject, finalize_body(body), ids)) - set(first_flags)
+    first_cliches = {m.group(0).lower() for m in CLICHE_RE.finditer(f"{first.subject}\n{first.body}")}
+    new_cliches = {m.group(0).lower() for m in CLICHE_RE.finditer(f"{subject}\n{body}")} - first_cliches
+    first_leaks = {m.group(0).lower() for m in META_RE.finditer(f"{first.subject}\n{first.body}")}
+    new_cliches |= {m.group(0).lower() for m in META_RE.finditer(f"{subject}\n{body}")} - first_leaks
+    ok = (all(c in known for c in ids) and (bool(ids) or not first_had_claims) and not new_flags and not new_cliches
+          and bool(subject) and len(subject) <= 70 and bool(question) and body.endswith(question)
+          and body.count("?") == 1 and 25 <= len(body.split()) <= 140
+          and body.splitlines()[0].strip() == first.body.strip().splitlines()[0].strip()
+          and not re.search(r"\[|https?:|www\.", f"{subject}\n{body}"))
+    if not ok:
+        log.info("draft editor revision rejected (new flags %s, new cliches %s)", sorted(new_flags), sorted(new_cliches))
+        return None
+    return DraftOut(subject=subject, body=body, discoveryQuestion=question, nextAction=first.nextAction,
+                    claimIds=ids, unresolvedClaims=first.unresolvedClaims)
+
+
+# Second pass: an editor critiques the first draft against the rubric and revises it; keeps the first draft on any failure
+async def _edit_pass(prompt: str, first: DraftOut) -> DraftOut:
+    first_ids = [c.strip() for c in first.claimIds if c.strip()]
+    first_flags = check_guardrails(first.subject, finalize_body(first.body), first_ids)
+    first_view = {"subject": first.subject, "body": first.body, "discoveryQuestion": first.discoveryQuestion,
+                  "claimIds": first_ids}
+    notes = _quality_notes(first.subject, first.body, first.discoveryQuestion)
+    editor_input = (f"CONTEXT:\n{prompt}\n\nFIRST_DRAFT:\n{json.dumps(first_view, ensure_ascii=False, indent=1)}"
+                    f"\n\nAUTOMATED_CHECKS:\n" + "\n".join(f"- {n}" for n in notes))
+    try:
+        rev, meta = await asyncio.wait_for(
+            structured("sdr_editor", EDITOR_INSTRUCTIONS, editor_input, EditOut,
+                       model=config.GENERATION_MODEL, effort=EDITOR_EFFORT), EDITOR_TIMEOUT_S)
+    except Exception as exc:
+        log.info("draft editor unavailable, keeping first draft: %s", type(exc).__name__)
+        return first
+    log.debug("first draft: %s\n%s", first.subject, first.body)
+    revised = _validated_revision(first, rev, first_flags)
+    if revised:
+        log.info("draft editor (%sms) changes: %s", meta.get("durationMs"), rev.changes[:5])
+    return revised or first
+
+
+# Draft one stage-aware email for a lead (write, then edit), validate claims, run guardrails, persist and return the Draft
 async def draft_for_lead(lead: Lead, kind: DraftKind, assessment: Optional[Assessment] = None,
                          theme: Optional[str] = None, touch: Optional[int] = None, *,
                          enrollment_id: Optional[str] = None, due_at: Optional[str] = None) -> Draft:
@@ -472,10 +566,14 @@ async def draft_for_lead(lead: Lead, kind: DraftKind, assessment: Optional[Asses
     prompt, _claims, question = build_prompt(lead, kind, assessment, theme_key, theme, touch)
     mode, model = "live", config.GENERATION_MODEL
     try:
-        out, meta = await structured("sdr_drafter", INSTRUCTIONS, prompt, DraftOut, model=config.GENERATION_MODEL)
+        out, meta = await structured("sdr_drafter", INSTRUCTIONS, prompt, DraftOut,
+                                     model=config.GENERATION_MODEL, effort=WRITER_EFFORT)
         model = meta.get("model") or model
+        log.info("draft writer took %sms", meta.get("durationMs"))
     except Exception:
         out, mode, model = fixture_draft(lead, kind, theme_key, theme, question, touch), "fixture", None
+    if mode == "live":
+        out = await _edit_pass(prompt, out)
     known = claim_index()
     raw_ids = [c.strip() for c in out.claimIds if c.strip()]
     valid = list(dict.fromkeys(c for c in raw_ids if c in known))

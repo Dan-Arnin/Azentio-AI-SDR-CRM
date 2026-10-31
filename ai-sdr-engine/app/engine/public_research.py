@@ -287,8 +287,17 @@ async def _run_public_search(domain: str, company_name: str) -> dict:
                 response_include=["web_search_call.action.sources", "web_search_call.results"]),
             output_type=PublicCompanyResearch,
         )
-        run = await asyncio.wait_for(Runner.run(agent, json.dumps({"officialDomain": domain, "companyName": company_name}),
-            max_turns=3, run_config=RunConfig(tracing_disabled=True, trace_include_sensitive_data=False)), timeout=90)
+        from app.llm import calllog
+        call_started = time.perf_counter()
+        try:
+            run = await asyncio.wait_for(Runner.run(agent, json.dumps({"officialDomain": domain, "companyName": company_name}),
+                max_turns=3, run_config=RunConfig(tracing_disabled=True, trace_include_sensitive_data=False)), timeout=90)
+        except Exception as exc:
+            calllog.record("company_web_research", "openai_web_search", LUNA_MODEL, call_started, ok=False, error=type(exc).__name__)
+            raise
+        calllog.record("company_web_research", "openai_web_search", LUNA_MODEL, call_started, usage={
+            "input_tokens": sum(getattr(r.usage, "input_tokens", 0) for r in run.raw_responses),
+            "output_tokens": sum(getattr(r.usage, "output_tokens", 0) for r in run.raw_responses)})
         output = run.final_output if isinstance(run.final_output, PublicCompanyResearch) else PublicCompanyResearch.model_validate(run.final_output)
         outputs = []
         usage = {"input_tokens": 0, "output_tokens": 0, "requests": 0}
