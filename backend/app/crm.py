@@ -161,11 +161,21 @@ def _project(conn: Connection, lead_id: str, env: dict) -> None:
         sets["suppressed"] = True
     elif kind == "alert.ae_handoff":
         sets.update(_handoff(conn, lead_id, snap, payload, acct))
-    bumps = {"draft.pending_approval": "emails_drafted", "message.sent": "emails_sent", "reply.received": "replies"}
+    elif kind == "lead.erased":
+        _erase(conn, lead_id, env["id"])
+        sets.update(full_name="Erased contact", email=None, title=None, bant=None)
+    bumps ={"draft.pending_approval": "emails_drafted", "message.sent": "emails_sent", "reply.received": "replies"}
     assignments = [f"{col} = %s" for col in sets] + ([f"{bumps[kind]} = {bumps[kind]} + 1"] if kind in bumps else [])
     assignments += ["last_event_type = CASE WHEN last_event_at IS NULL OR last_event_at <= %s THEN %s ELSE last_event_type END",
                     "last_event_at = GREATEST(last_event_at, %s)", "updated_at = now()"]
     conn.execute(f"UPDATE crm_leads SET {', '.join(assignments)} WHERE engine_lead_id = %s", [*sets.values(), at, kind, at, lead_id])
+
+
+def _erase(conn: Connection, lead_id: str, erase_event_id: str) -> None:
+    """A data-subject erasure in the engine: drop the personal data we hold for that lead (event bodies keep their hash for idempotency)."""
+    conn.execute("UPDATE crm_events SET payload = %s WHERE engine_lead_id = %s AND id <> %s", [Jsonb({"erased": True}), lead_id, erase_event_id])
+    conn.execute("UPDATE opportunities SET bant_snapshot = NULL WHERE external_ref = %s", [f"engine:{lead_id}"])
+    audit(conn, "crm_lead", None, "erased_from_engine_request", "system", "ai-sdr-engine", {"engineLeadId": lead_id})
 
 
 def _handoff(conn: Connection, lead_id: str, snap: dict, payload: dict, acct: int | None) -> dict:

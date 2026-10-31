@@ -139,6 +139,10 @@ Rules: snapshots only move forward by the engine's lead `version` (events may ar
 
 Tests replay 40 real events captured from the engine (`fixtures/engine_crm_events.jsonl`, signed with `test-secret`).
 
+## Trust & governance page
+
+`/console/trust` in the engine: six headline tiles, seven panels, the audit log and the controls register, each figure linked to its records. Sales Manager and Portal Admin see the whole page; an SDR sees only their own summary (checked on the server). Details: [ai-sdr-engine/docs/GOVERNANCE.md](ai-sdr-engine/docs/GOVERNANCE.md). Sign-in uses the demo password in `CONSOLE_PASSWORD` (Render generates it on the engine service).
+
 ## Next steps by owner
 
 - **A:** build the website form and CSV import UI against `backend/openapi.json`. Generate the `idempotency-key` once per submit.

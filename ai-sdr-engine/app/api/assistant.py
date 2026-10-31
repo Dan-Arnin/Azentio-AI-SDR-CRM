@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import json
+import re
 import statistics
 from datetime import datetime, timedelta, timezone
 from typing import Any, Optional
@@ -219,22 +220,60 @@ def campaigns_overview() -> str:
     return json.dumps(out)
 
 
+@function_tool
+def get_governance(days: int = 30) -> str:
+    """Trust and governance figures for the last N days: human-approved sends, verified BANT quotes, opt-outs and whether anyone
+    was emailed after opting out (sentAfter per opt-out), open guardrail flags, blocked hidden-instruction attempts, sends blocked
+    by the suppression list, consent holds, data requests and the controls register status."""
+    from app.governance.report import governance_report, records
+
+    viewer = {"id": "assistant", "permissions": ["viewGovernance"]}
+    r = governance_report(viewer, max(1, min(days, 90)))
+    optouts = records("optouts", viewer, max(1, min(days, 90)))["rows"]
+    return json.dumps({"period": r["period"], "tiles": r["tiles"], "optOuts": optouts,
+                       "injections": r["panels"]["guardrails"]["injections"], "consent": r["panels"]["consent"],
+                       "controls": {s: sum(1 for c in r["register"]["rows"] if c["status"] == s) for s in ("Live", "Partial", "Not built")}},
+                      default=str)
+
+
 ASSISTANT_INSTRUCTIONS = """You are the Azentio Sales Workspace assistant for SDRs and account executives.
-Answer questions about leads, tasks, approvals, replies, campaigns and pipeline performance using ONLY the tools. Never invent leads, numbers, meetings or deal values.
+Answer questions about leads, tasks, approvals, replies, campaigns, pipeline performance and trust/governance (opt-outs, approvals, guardrails, consent, audit) using ONLY the tools. For governance questions state the count you checked. Never invent leads, numbers, meetings or deal values.
 The workspace has no meeting calendar and no deal values: if asked about meetings or revenue, say so briefly and offer the closest available view (qualified leads, opportunities, tasks).
 Style: concise, plain business English, no jargon (say "buying signals" not BANT, "fit" not ICP). Start with the direct answer. Use short "- " bullet lines for lists, at most 8 items, each with the person's full name and company exactly as returned by tools, plus the one detail that matters. End with one suggested next step when useful.
 Never mention tools, APIs, models or JSON."""
+
+
+OPT_OUT_Q = re.compile(r"\b(opt(ed)?[- ]?out|unsubscrib\w*|suppress\w*)\b", re.IGNORECASE)
+
+
+# Rule-based answer to "did we contact anyone who opted out?" from the governance report, used when the model is unavailable
+def _opt_out_answer() -> dict[str, Any]:
+    from app.governance.report import records
+
+    rows = records("optouts", {"id": "assistant", "permissions": ["viewGovernance"]}, 30)["rows"]
+    breached = [r for r in rows if r["sentAfter"]]
+    if not rows:
+        text = "No one opted out in the last 30 days, so there was nobody to check."
+    elif not breached:
+        text = (f"No. I checked {len(rows)} opt-out(s) in the last 30 days and none received an email afterwards."
+                + (f" {sum(r['blockedAfter'] for r in rows)} later send attempt(s) were blocked by the suppression list." if any(r["blockedAfter"] for r in rows) else ""))
+    else:
+        text = f"Yes, {len(breached)} of {len(rows)} opted-out contacts received an email afterwards:\n" + "\n".join(
+            f"- {r['name']}: {r['sentAfter']} email(s) after opting out" for r in breached)
+    return {"answer": text, "leads": [{"leadId": r["leadId"], "name": r["name"]} for r in rows]}
 
 
 # Ask the workspace assistant a question (Agents SDK agent with read-only data tools)
 @router.post("/assistant/ask")
 async def ask(body: AskInput) -> dict[str, Any]:
     who = PEOPLE.get(body.userId or "", "a sales team member")
-    agent = build_agent("workspace_assistant", ASSISTANT_INSTRUCTIONS + f"\nThe user is {who} (id {body.userId}). 'My'/'me' refers to them.",
-                        model=config.GENERATION_MODEL, tools=[search_leads, lead_details, tasks_for, pipeline_stats, campaigns_overview], effort="low")
     try:
+        agent = build_agent("workspace_assistant", ASSISTANT_INSTRUCTIONS + f"\nThe user is {who} (id {body.userId}). 'My'/'me' refers to them.",
+                            model=config.GENERATION_MODEL, tools=[search_leads, lead_details, tasks_for, pipeline_stats, campaigns_overview, get_governance], effort="low")
         answer, meta = await run_agent(agent, body.question.strip()[:1000], max_turns=8)
-    except LLMUnavailable:
+    except Exception:  # no key, client error or model failure: degrade gracefully
+        if OPT_OUT_Q.search(body.question):
+            return _opt_out_answer()
         return {"answer": "I couldn't reach the assistant just now. Please try again in a moment.", "leads": []}
     text = str(answer or "").strip()
     names = {l.input.fullName: l.id for l in db.list_("leads", Lead, limit=5000)}

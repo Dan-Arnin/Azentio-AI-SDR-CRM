@@ -89,6 +89,15 @@ def _dig(d: Any, path: str) -> Any:
     return d
 
 
+# Remove one record (used by erasure to replace a plaintext suppression entry with its hash)
+def delete(kind: str, id_: str) -> None:
+    if kind not in KINDS:
+        raise ValueError(f"unknown kind {kind}")
+    with _lock:
+        conn().execute(f"DELETE FROM {kind} WHERE id=?", (id_,))
+        conn().commit()
+
+
 # Drop every table (demo reset)
 def reset() -> None:
     with _lock:

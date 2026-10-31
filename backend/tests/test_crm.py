@@ -169,3 +169,24 @@ def test_resync_fills_gaps_and_matches_webhook_bytes(c):
 def test_resync_needs_engine_url(c, monkeypatch):
     monkeypatch.delenv("ENGINE_URL", raising=False)
     assert c.post("/v1/crm/resync").json()["code"] == "engine_url_not_configured"
+
+
+def test_engine_erasure_removes_personal_data(c):
+    replay(c)
+    assert post(c, handoff(LAYLA)).status_code == 200
+    erased = json.dumps({"id": "crm_erase_1", "type": "lead.erased", "leadId": LAYLA, "occurredAt": "2026-10-31T13:00:00+00:00",
+                         "payload": {"reason": "erase request dsr_1"}}, separators=(",", ":"))
+    assert post(c, erased).status_code == 200
+    detail = c.get(f"/v1/crm/leads/{LAYLA}").json()
+    assert detail["lead"]["full_name"] == "Erased contact" and detail["lead"]["email"] is None and detail["lead"]["bant"] is None
+    assert detail["opportunity"]["bant_snapshot"] is None
+    assert all(e["payload"] == {"erased": True} for e in detail["timeline"] if e["type"] != "lead.erased")
+    assert "Layla" not in json.dumps(detail)
+    assert post(c, CAPTURED[0]["body"], CAPTURED[0]["signature"]).json()["duplicate"] is True  # a late retry stays a no-op
+
+
+def test_audit_events_from_the_engine_are_kept_without_a_lead(c):
+    env = json.dumps({"id": "crm_audit_1", "type": "audit.recorded", "leadId": None, "occurredAt": "2026-10-31T13:00:00+00:00",
+                      "payload": {"id": "aud_1", "actor": "mgr.hana", "action": "campaign.paused"}}, separators=(",", ":"))
+    assert post(c, env).json() == {"received": True, "id": "crm_audit_1", "duplicate": False}
+    assert c.get("/v1/crm/leads").json() == []

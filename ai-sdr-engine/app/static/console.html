@@ -415,6 +415,7 @@ button.avatar-me { border: 0; cursor: pointer; }
 }
 @media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation: none !important; transition: none !important; } }
 </style>
+<link rel="stylesheet" href="/static/trust.css?v=5" />
 </head>
 <body>
 <a class="skip" href="#main">Skip to content</a>
@@ -432,6 +433,7 @@ button.avatar-me { border: 0; cursor: pointer; }
       <a href="#/opportunities" data-view="opportunities"><span data-icon="target"></span><span class="lbl">Opportunities</span> <span class="count hot" id="c-opps" hidden></span></a>
       <a href="#/campaigns" data-view="campaigns"><span data-icon="megaphone"></span><span class="lbl">Campaigns</span></a>
       <a href="#/insights" data-view="insights"><span data-icon="chart"></span><span class="lbl">Insights</span></a>
+      <a href="#/trust" data-view="trust"><span data-icon="shield"></span><span class="lbl">Trust</span></a>
     </nav>
     <div class="topbar-right">
       <button class="btn sm" id="btn-add" type="button"><span data-icon="plus"></span>Add lead</button>
@@ -460,6 +462,7 @@ button.avatar-me { border: 0; cursor: pointer; }
 </div>
 <div class="toasts" id="toasts" aria-live="polite"></div>
 
+<script src="/static/trust.js?v=5"></script>
 <script>
 "use strict";
 // ---------- Vocabulary (business language only) ----------
@@ -632,6 +635,7 @@ async function refresh(force) {
     }
     if (S.view === "campaigns") S.campaigns = (await api("/v1/campaigns")).items || [];
     if (S.view === "insights") S.dash = await api("/v1/dashboard");
+    if (S.view === "trust") await loadTrust();
     if (S.view === "home") S.home = await api("/v1/home?userId=" + encodeURIComponent(S.me) + "&days=" + S.kpiDays);
   } catch (e) { return; }
   const typing = document.activeElement && document.activeElement.closest && document.activeElement.closest("#main") && /INPUT|TEXTAREA|SELECT/.test(document.activeElement.tagName);
@@ -647,7 +651,7 @@ function route() {
   const [, view = "leads", id] = path.split("/");
   if (view === "approvals") S.apFilter = params.get("c") || "all";
   if (view === "leads" && params.get("c")) S.srcFilter = "c:" + params.get("c");
-  S.view = ["home", "leads", "approvals", "opportunities", "campaigns", "insights"].includes(view) ? view : "home";
+  S.view = ["home", "leads", "approvals", "opportunities", "campaigns", "insights", "trust"].includes(view) ? view : "home";
   S.leadId = S.view === "leads" ? (id || S.leadId) : S.leadId;
   document.querySelectorAll(".nav a").forEach(a => a.setAttribute("aria-current", a.dataset.view === S.view ? "page" : "false"));
   refresh(true).then(() => $("#main").focus({ preventScroll: true }));
@@ -657,7 +661,7 @@ const openLead = id => { location.hash = "#/leads/" + id; };
 // ---------- Render root ----------
 function render() {
   const main = $("#main"); const keep = window.scrollY;
-  main.replaceChildren(({ home: viewHome, leads: viewLeads, approvals: viewApprovals, opportunities: viewOpps, campaigns: viewCampaigns, insights: viewInsights })[S.view]());
+  main.replaceChildren(({ home: viewHome, leads: viewLeads, approvals: viewApprovals, opportunities: viewOpps, campaigns: viewCampaigns, insights: viewInsights, trust: viewTrust })[S.view]());
   window.scrollTo(0, keep);
 }
 

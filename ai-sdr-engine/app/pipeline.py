@@ -274,6 +274,9 @@ def suppress(lead: Lead, reason: str, run: Run) -> Lead:
         db.put("suppressions", Suppression(id=lead.normalizedEmail, leadId=lead.id, email=lead.normalizedEmail,
                                            reason=reason, at=now_iso()))
         save_lead(lead, "suppressed", reason)
+        from app.governance import store as gov_store
+        gov_store.audit("prospect", "prospect", "suppression.added", "suppression", lead.normalizedEmail, lead.id,
+                        after={"reason": reason}, detail="Added automatically from the prospect's request")
         set_stage(lead, "SUPPRESSED", reason)
         emit("lead.suppressed", lead, reason=reason, stoppedEnrollments=[e.id for e in stopped], staleDrafts=staled)
         info["detail"] = f"{reason}; {len(stopped)} enrollment(s) stopped, {staled} draft(s) made stale"
@@ -766,7 +769,7 @@ async def _route_human_review(lead: Lead, asm: Assessment, run: Run, reasons: st
 
 
 # Send an approved draft through the simulated transport and record the outbound message
-async def send_draft(draft_id: str) -> Message:
+async def send_draft(draft_id: str, actor: tuple[str, str] = ("system", "system")) -> Message:
     from app.engagement import sequences
     from app.engagement.transport import simulate_send
 
@@ -783,7 +786,14 @@ async def send_draft(draft_id: str) -> Message:
             sequences.mark_touch_sent(get_draft(draft_id))
     except Exception as exc:
         finish_run(run, "failed", str(exc) if isinstance(exc, ValueError) else type(exc).__name__)
+        if isinstance(exc, ValueError):
+            from app.governance import store as gov_store
+            gov_store.audit(*actor, "send.blocked", "draft", draft.id, lead.id, detail=str(exc),
+                            after={"kind": draft.kind, "enrollmentId": draft.enrollmentId})
         raise
+    from app.governance import store as gov_store
+    gov_store.audit(*actor, "send.sent", "message", msg.id, lead.id,
+                    after={"draftId": draft.id, "kind": draft.kind, "approvedBy": draft.approvedBy, "transport": msg.transport})
     lead = get_lead(lead.id)
     if draft.kind == "gap_fill":
         lead.gapFillsSent += 1

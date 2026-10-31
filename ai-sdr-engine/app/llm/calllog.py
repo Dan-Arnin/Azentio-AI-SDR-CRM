@@ -1,6 +1,8 @@
 # app/llm/calllog.py - Audit log of every real model/API call (purpose, model, duration, tokens) tied to the lead and pipeline step
 from __future__ import annotations
 
+import json
+import re
 import time
 from contextvars import ContextVar
 from typing import Any, Optional
@@ -26,6 +28,7 @@ class AiCall(BaseModel):
     inputTokens: Optional[int] = None
     outputTokens: Optional[int] = None
     error: Optional[str] = None
+    fields: list[str] = Field(default_factory=list)  # names of the input fields sent, never their values
     at: str = Field(default_factory=now_iso)
 
 
@@ -41,7 +44,7 @@ def unbind(token) -> None:
 
 # Persist one AI call record (never raises: logging must not break the pipeline)
 def record(purpose: str, provider: str, model: str, started: float, ok: bool = True,
-           usage: Optional[dict[str, Any]] = None, error: Optional[str] = None) -> None:
+           usage: Optional[dict[str, Any]] = None, error: Optional[str] = None, fields: Optional[list[str]] = None) -> None:
     try:
         c = _ctx.get()
         usage = usage or {}
@@ -49,9 +52,28 @@ def record(purpose: str, provider: str, model: str, started: float, ok: bool = T
             leadId=c.get("leadId"), step=c.get("step"), purpose=purpose, provider=provider, model=model, ok=ok,
             durationMs=int((time.perf_counter() - started) * 1000),
             inputTokens=usage.get("input_tokens"), outputTokens=usage.get("output_tokens"), error=(error or "")[:200] or None,
+            fields=fields or [],
         ))
     except Exception:  # noqa: BLE001 - audit logging is best effort
         pass
+
+
+# Names of the fields in a model input: JSON keys (one level deep), <tag> sections and LABEL: headings. Values are never kept.
+def field_names(user_input: Any) -> list[str]:
+    text = user_input if isinstance(user_input, str) else json.dumps(user_input, default=str)
+    names: list[str] = []
+    try:
+        obj, _ = json.JSONDecoder().raw_decode(text.lstrip())
+        if isinstance(obj, dict):
+            for k, v in obj.items():
+                names.append(k)
+                if isinstance(v, dict):
+                    names += [f"{k}.{sub}" for sub in v]
+    except ValueError:
+        pass
+    names += re.findall(r"<([a-zA-Z_]+)>", text)
+    names += re.findall(r"^([A-Z][A-Z_]{3,}):", text, re.MULTILINE)
+    return list(dict.fromkeys(names))[:60] or ["free_text"]
 
 
 # All recorded AI calls for a lead, oldest first

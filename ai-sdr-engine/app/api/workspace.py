@@ -4,7 +4,7 @@ from __future__ import annotations
 from functools import lru_cache
 from typing import Any, Optional
 
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, Request
 from pydantic import BaseModel
 
 from app import db
@@ -206,7 +206,7 @@ def team() -> dict[str, Any]:
 
 # Assign or change the owner of a lead (and its open AE handoff)
 @router.post("/leads/{lead_id}/owner")
-def set_owner(lead_id: str, body: OwnerInput) -> dict[str, Any]:
+def set_owner(lead_id: str, body: OwnerInput, request: Request) -> dict[str, Any]:
     from app import pipeline
 
     lead = db.get("leads", lead_id, Lead)
@@ -219,6 +219,9 @@ def set_owner(lead_id: str, body: OwnerInput) -> dict[str, Any]:
     if body.ownerId.startswith("ae.") and not lead.accountOwnerId:
         lead.accountOwnerId = body.ownerId
     lead.history.append({"at": now_iso(), "type": "owner_changed", "detail": f"{previous} -> {body.ownerId}"})
+    from app.governance import auth as gov_auth, store as gov_store
+    gov_store.audit(*gov_auth.actor(request, "workspace user"), "lead.owner_changed", "lead", lead_id, lead_id,
+                    before={"ownerId": previous}, after={"ownerId": body.ownerId})
     lead.updatedAt = now_iso()
     db.put("leads", lead)
     if body.ownerId.startswith("ae."):

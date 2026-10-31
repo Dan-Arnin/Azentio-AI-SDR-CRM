@@ -53,6 +53,10 @@ services:
         sync: false
       - key: CRM_WEBHOOK_URL # backend URL + /v1/crm/events, e.g. https://azentio-sdr-backend.onrender.com/v1/crm/events
         sync: false
+      - key: CONSOLE_PASSWORD # demo sign-in for the Trust page (Render generates it: Environment tab -> reveal, share with judges)
+        generateValue: true
+      - key: SESSION_SECRET # signs console sessions
+        generateValue: true
       - key: CRM_WEBHOOK_SECRET
         fromService:
           type: web

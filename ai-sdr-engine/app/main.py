@@ -22,6 +22,7 @@ from app.api.assistant import router as assistant_router
 from app.api.public_enquiry import router as public_enquiry_router
 from app.crm import outbox
 from app.crm.mock_crm import router as mock_crm_router
+from app.governance.api import router as governance_router
 
 STATIC_DIR = Path(__file__).resolve().parent / "static"
 
@@ -76,6 +77,7 @@ app.include_router(assistant_router)
 app.include_router(public_enquiry_router)
 app.include_router(inbox_router)
 app.include_router(mock_crm_router)
+app.include_router(governance_router)
 STATIC_DIR.mkdir(exist_ok=True)
 app.mount("/static", StaticFiles(directory=STATIC_DIR), name="static")
 app.mount("/assets", StaticFiles(directory=STATIC_DIR / "assets"), name="assets")
@@ -103,6 +105,12 @@ def workspace() -> Response:
 @app.get("/console", include_in_schema=False)
 def console() -> Response:
     return page("console.html")
+
+
+# Trust & governance page (spec address); the page lives in the workspace shell
+@app.get("/console/trust", include_in_schema=False)
+def console_trust() -> Response:
+    return RedirectResponse("/workspace#/trust")
 
 
 # Public Azentio-style contact form that posts leads into the engine
