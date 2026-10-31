@@ -13,6 +13,7 @@ from pydantic import BaseModel
 
 from app import config, db
 from app.contracts import Assessment, Draft, DraftKind, Lead, Message
+from app.engagement import personalization as pz
 from app.llm.client import structured
 
 SENDER = (f"Azentio {config.SENDER_TITLE} team" if "team" in config.SENDER_NAME.lower()
@@ -20,6 +21,15 @@ SENDER = (f"Azentio {config.SENDER_TITLE} team" if "team" in config.SENDER_NAME.
 OPT_OUT_LINE = 'Prefer not to hear from us? Reply "unsubscribe" and we will not email you again.'
 BLOCKING_FLAGS = {"pricing", "sla_commitment", "overclaim", "regulator_claim", "outside_link", "missing_opt_out"}
 BANT_ORDER = ("need", "timeline", "authority", "budget")
+OBJECTION_ACK = {
+    "price": "Budget pressure is real this year, so a phased first step that a specialist scopes with you may be the sensible place to start.",
+    "timing": "Timing matters, so there is no need to rush this; we can work around your calendar.",
+    "incumbent": "It makes sense to build on the system you already run rather than start again.",
+    "priority": "Other priorities come first, so a short exchange of notes may be more useful than a meeting right now.",
+    "fit": "It is worth checking fit properly before anyone spends time on it.",
+    "security": "Security and compliance questions deserve a proper answer from a specialist rather than a quick reply.",
+    "other": "That is a fair point and worth addressing properly.",
+}
 QUESTION_BANK = {
     "need": "What is the main business outcome you are hoping this project will achieve?",
     "timeline": "Is there a target timeframe your team is working towards for this project?",
@@ -75,6 +85,7 @@ META_RE = re.compile(
     r"discoveryQuestion|nextAction|KIND_|ICP|enrichment|untrusted|as an AI)\b",
     re.IGNORECASE,
 )
+RE_PREFIX_RE = re.compile(r"^(re:\s*){2,}", re.IGNORECASE)
 WRITER_EFFORT = "low"
 EDITOR_EFFORT = "low"
 EDITOR_TIMEOUT_S = 25
@@ -105,6 +116,15 @@ KIND_PLAYBOOK: dict[str, str] = {
         "sentence, the way a person would (e.g. agree with the timing they gave); no meta-commentary about their note. Ask "
         "exactly ONE unresolved qualification question (NEXT_QUESTION). Do not repeat questions they already answered. "
         "Keep it under 90 words. Subject should start with 'Re: ' followed by the previous subject if given."
+    ),
+    "gap_fill_objection": (
+        "OBJECTION is given: right after the greeting, acknowledge that concern in one plain, respectful sentence and "
+        "respond along the lines of OBJECTION.suggestedHandling, using only APPROVED_CLAIMS (never pricing, cost, budget "
+        "figures, discounts, free offers, SLAs, delivery timelines or any commitment). Then ask the ONE question."
+    ),
+    "gap_fill_competitors": (
+        "COMPETITORS_MENTIONED is given: you may acknowledge they already have a system, but never criticise, compare "
+        "against or name those vendors negatively; talk only about what Azentio's approved claims say."
     ),
     "nurture_reminder": (
         "Stage NURTURE. The prospect said now is not the right time. Respect the timing they stated (see LAST_REPLY / "
@@ -280,7 +300,7 @@ def content_hash(subject: str, body: str) -> str:
 
 
 # Regex guardrails: pricing, SLA/commitments, meeting promises, numeric claims, unknown claim ids
-def check_guardrails(subject: str, body: str, claim_ids: list[str]) -> list[str]:
+def check_guardrails(subject: str, body: str, claim_ids: list[str], channel: str = "email") -> list[str]:
     text = f"{subject}\n{body}"
     flags: list[str] = []
     if PRICING_RE.search(text):
@@ -297,7 +317,8 @@ def check_guardrails(subject: str, body: str, claim_ids: list[str]) -> list[str]
         flags.append("regulator_claim")
     if any(not m.group(2).lower().rstrip(".").endswith("azentio.com") for m in LINK_RE.finditer(text)):
         flags.append("outside_link")
-    if OPT_OUT_LINE not in body:
+    # each channel carries its own opt-out: the email footer, or "Reply STOP" in a text; LinkedIn notes have none
+    if (channel == "email" and OPT_OUT_LINE not in body) or (channel == "text" and "reply stop" not in body.lower()):
         flags.append("missing_opt_out")
     known = claim_index()
     if any(cid not in known for cid in claim_ids):
@@ -414,6 +435,14 @@ def build_prompt(lead: Lead, kind: str, assessment: Optional[Assessment], theme_
         "PREVIOUS_SUBJECT": last_out.subject if last_out else None,
         "APPROVED_CLAIMS": [{"id": c["id"], "text": c["text"]} for c in claims],
     }
+    if assessment and kind == "gap_fill":
+        if assessment.objections:
+            obj = assessment.objections[0]
+            ctx["OBJECTION"] = {"type": obj.get("type"), "suggestedHandling": _quote_untrusted(obj.get("handling"), 200)}
+            ctx["OBJECTION_PLAYBOOK"] = KIND_PLAYBOOK["gap_fill_objection"]
+        if assessment.competitors:
+            ctx["COMPETITORS_MENTIONED"] = [_quote_untrusted(c.get("name"), 60) for c in assessment.competitors]
+            ctx["COMPETITOR_PLAYBOOK"] = KIND_PLAYBOOK["gap_fill_competitors"]
     if assessment and kind == "nurture_reminder":
         tl = assessment.bant.get("timeline")
         ctx["TIMING_NOTE"] = (tl.evidence[0].excerpt if tl and tl.evidence else None) or assessment.nextAction
@@ -431,7 +460,22 @@ def build_prompt(lead: Lead, kind: str, assessment: Optional[Assessment], theme_
         parts.append(f"<untrusted_inquiry>\n{_quote_untrusted(inp.inquiry)}\n</untrusted_inquiry>")
     if last_in and kind in ("gap_fill", "nurture_reminder"):
         parts.append(f"<untrusted_last_reply>\n{_quote_untrusted(last_in.body)}\n</untrusted_last_reply>")
+    research = pz.research_block(pz.context_for(lead))
+    if research:
+        parts.append(research)
     return "\n\n".join(parts), claims, question
+
+
+# System instructions for a pass: base rules, then public research rules (if any), then the writing style
+def with_extras(base: str, prompt: str, style: Optional[pz.StyleRecord], rubric: Optional[str] = None,
+                channel: str = "email") -> str:
+    extra = [base]
+    if "<untrusted_public_research>" in prompt:
+        extra += [pz.RESEARCH_RULES] + ([rubric] if rubric else [])
+    block = pz.style_block(style, channel)
+    if block:
+        extra.append(block)
+    return "\n\n".join(extra)
 
 
 # Body text without the fixed sign-off and opt-out footer
@@ -441,7 +485,7 @@ def _strip_signoff(body: str) -> str:
 
 # Append the fixed sign-off and opt-out footer
 def finalize_body(body: str) -> str:
-    body = body.strip()
+    body = re.sub(r"\n{3,}", "\n\n", body.strip())
     if OPT_OUT_LINE in body:
         return body
     return f"{body}\n\nKind regards,\n{SENDER}\n\n{OPT_OUT_LINE}"
@@ -449,7 +493,7 @@ def finalize_body(body: str) -> str:
 
 # Deterministic template used when the model is unavailable
 def fixture_draft(lead: Lead, kind: str, theme_key: Optional[str], theme_text: Optional[str],
-                  question: Optional[str], touch: Optional[int]) -> DraftOut:
+                  question: Optional[str], touch: Optional[int], assessment: Optional[Assessment] = None) -> DraftOut:
     inp = lead.input
     name = first_name(inp.fullName)
     kb = knowledge()
@@ -479,7 +523,9 @@ def fixture_draft(lead: Lead, kind: str, theme_key: Optional[str], theme_text: O
         ids, na = [prod_claim["id"]], "Prospect indicates priority and optionally accepts a discussion."
     elif kind == "gap_fill":
         subj = "Re: your enquiry"
-        body = f"Hi {name},\n\nThank you for your reply, that is helpful context.\n\n{q}"
+        objection = assessment.objections[0] if assessment and assessment.objections else None
+        opener = OBJECTION_ACK.get(objection.get("type"), OBJECTION_ACK["other"]) if objection else "Thank you for your reply, that is helpful context."
+        body = f"Hi {name},\n\n{opener}\n\n{q}"
         ids, na = [], "Prospect answers the next unresolved qualification question."
     elif kind == "nurture_reminder":
         q = "Has anything changed in your plans since we last spoke?"
@@ -531,7 +577,7 @@ def _quality_notes(subject: str, body: str, question: str) -> list[str]:
 
 
 # Accept the editor's revision only if claims, guardrails and structure all pass; otherwise None
-def _validated_revision(first: DraftOut, rev: EditOut, first_flags: list[str]) -> Optional[DraftOut]:
+def _validated_revision(first: DraftOut, rev: EditOut, first_flags: list[str], context: str = "") -> Optional[DraftOut]:
     known = claim_index()
     ids = list(dict.fromkeys(c.strip() for c in rev.claimIds if c.strip()))
     body, question = rev.body.strip(), rev.discoveryQuestion.strip()
@@ -543,6 +589,7 @@ def _validated_revision(first: DraftOut, rev: EditOut, first_flags: list[str]) -
     new_cliches = {m.group(0).lower() for m in CLICHE_RE.finditer(f"{subject}\n{body}")} - first_cliches
     first_leaks = {m.group(0).lower() for m in META_RE.finditer(f"{first.subject}\n{first.body}")}
     new_cliches |= {m.group(0).lower() for m in META_RE.finditer(f"{subject}\n{body}")} - first_leaks
+    new_cliches |= pz.personalization_hits(subject, body, context) - pz.personalization_hits(first.subject, first.body, context)
     ok = (all(c in known for c in ids) and (bool(ids) or not first_had_claims) and not new_flags and not new_cliches
           and bool(subject) and len(subject) <= 70 and bool(question) and body.endswith(question)
           and body.count("?") == 1 and 25 <= len(body.split()) <= 140
@@ -556,60 +603,67 @@ def _validated_revision(first: DraftOut, rev: EditOut, first_flags: list[str]) -
 
 
 # Second pass: an editor critiques the first draft against the rubric and revises it; keeps the first draft on any failure
-async def _edit_pass(prompt: str, first: DraftOut) -> DraftOut:
+async def _edit_pass(prompt: str, first: DraftOut, instructions: str = EDITOR_INSTRUCTIONS) -> DraftOut:
     first_ids = [c.strip() for c in first.claimIds if c.strip()]
     first_flags = check_guardrails(first.subject, finalize_body(first.body), first_ids)
     first_view = {"subject": first.subject, "body": first.body, "discoveryQuestion": first.discoveryQuestion,
                   "claimIds": first_ids}
     notes = _quality_notes(first.subject, first.body, first.discoveryQuestion)
+    notes = [n for n in notes if n != "no automated issues found"] + pz.personalization_notes(first.subject, first.body, prompt) \
+        or ["no automated issues found"]
     editor_input = (f"CONTEXT:\n{prompt}\n\nFIRST_DRAFT:\n{json.dumps(first_view, ensure_ascii=False, indent=1)}"
                     f"\n\nAUTOMATED_CHECKS:\n" + "\n".join(f"- {n}" for n in notes))
     try:
         rev, meta = await asyncio.wait_for(
-            structured("sdr_editor", EDITOR_INSTRUCTIONS, editor_input, EditOut,
+            structured("sdr_editor", instructions, editor_input, EditOut,
                        model=config.GENERATION_MODEL, effort=EDITOR_EFFORT), EDITOR_TIMEOUT_S)
     except Exception as exc:
         log.info("draft editor unavailable, keeping first draft: %s", type(exc).__name__)
         return first
     log.debug("first draft: %s\n%s", first.subject, first.body)
-    revised = _validated_revision(first, rev, first_flags)
+    revised = _validated_revision(first, rev, first_flags, prompt)
     if revised:
         log.info("draft editor (%sms) changes: %s", meta.get("durationMs"), rev.changes[:5])
     return revised or first
 
 
-# Draft one stage-aware email for a lead (write, then edit), validate claims, run guardrails, persist and return the Draft
+# Draft one stage-aware email for a lead (write, then edit) in the resolved style, validate claims, run guardrails, persist (unless previewing) and return the Draft
 async def draft_for_lead(lead: Lead, kind: DraftKind, assessment: Optional[Assessment] = None,
                          theme: Optional[str] = None, touch: Optional[int] = None, *,
-                         enrollment_id: Optional[str] = None, due_at: Optional[str] = None) -> Draft:
+                         enrollment_id: Optional[str] = None, due_at: Optional[str] = None,
+                         style_id: Optional[str] = None, persist: bool = True) -> Draft:
     inp = lead.input
     touch = touch or touch_of(kind)
     theme_key = resolve_theme(theme) or resolve_theme(inp.eventName) or resolve_theme(inp.assetName) or resolve_theme(inp.campaignId)
     prompt, _claims, question = build_prompt(lead, kind, assessment, theme_key, theme, touch)
+    style = pz.resolve_style(lead, "email", style_id, enrollment_id)
     mode, model = "live", config.GENERATION_MODEL
     try:
-        out, meta = await structured("sdr_drafter", INSTRUCTIONS, prompt, DraftOut,
+        out, meta = await structured("sdr_drafter", with_extras(INSTRUCTIONS, prompt, style), prompt, DraftOut,
                                      model=config.GENERATION_MODEL, effort=WRITER_EFFORT)
         model = meta.get("model") or model
         log.info("draft writer took %sms", meta.get("durationMs"))
     except Exception:
-        out, mode, model = fixture_draft(lead, kind, theme_key, theme, question, touch), "fixture", None
+        out, mode, model = fixture_draft(lead, kind, theme_key, theme, question, touch, assessment), "fixture", None
     if mode == "live":
-        out = await _edit_pass(prompt, out)
+        out = await _edit_pass(prompt, out, with_extras(EDITOR_INSTRUCTIONS, prompt, style, pz.EDITOR_RESEARCH_RUBRIC))
     known = claim_index()
     raw_ids = [c.strip() for c in out.claimIds if c.strip()]
     valid = list(dict.fromkeys(c for c in raw_ids if c in known))
     unresolved = [f"unknown_claim_id:{c}" for c in raw_ids if c not in known] + [u for u in out.unresolvedClaims if u.strip()]
-    body = finalize_body(out.body)
-    flags = check_guardrails(out.subject, body, raw_ids)
+    subject = RE_PREFIX_RE.sub("Re: ", out.subject.strip())
+    body = finalize_body("\n".join(line.strip() for line in out.body.strip().splitlines()))
+    flags = check_guardrails(subject, body, raw_ids)
     if unresolved and "unsupported_claim" not in flags:
         flags.append("unsupported_claim")
     draft = Draft(
-        leadId=lead.id, version=1, kind=kind, to=inp.email, subject=out.subject.strip(), body=body,
+        leadId=lead.id, version=1, kind=kind, to=inp.email, subject=subject, body=body,
         discoveryQuestion=out.discoveryQuestion or None, nextAction=out.nextAction, claimIds=valid,
         unresolvedClaims=unresolved, guardrailFlags=flags, status=status_for_flags(flags),
-        contentHash=content_hash(out.subject.strip(), body), enrollmentId=enrollment_id, dueAt=due_at,
+        contentHash=content_hash(subject, body), enrollmentId=enrollment_id, dueAt=due_at,
         model=model, mode=mode,
     )
-    db.put("drafts", draft)
+    if persist:
+        db.put("drafts", draft)
+        pz.record_usage(draft.id, lead.id, style, "email", "<untrusted_public_research>" in prompt)
     return draft

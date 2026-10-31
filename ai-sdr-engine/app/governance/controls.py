@@ -70,7 +70,7 @@ CONTROLS: list[Control] = [
             lambda r: (f"{sum(v['granted'] for v in _p(r, 'consent', 'byChannel').values())} granted · "
                        f"{sum(v['withdrawn'] for v in _p(r, 'consent', 'byChannel').values())} withdrawn", "optouts")
             if _p(r, "consent", "byChannel") else (None, "optouts"),
-            note="Email and the website form only; WhatsApp and ad lead forms are not built."),
+            note="Email and the website form record permission; SMS/WhatsApp and LinkedIn send only to controlled test recipients; ad lead forms are not built."),
     Control("C6", "Export and erase requests", "Compliance", "Must", "Live",
             lambda r: (f"{_p(r, 'dataRights', 'completed')} completed · {_p(r, 'dataRights', 'open')} open", "requests")
             if _p(r, "dataRights", "completed") or _p(r, "dataRights", "open") else (None, "requests")),
@@ -80,7 +80,8 @@ CONTROLS: list[Control] = [
     Control("A2", "Ad spend held to budget", "Paid ads", "Should", "Not built", simulated=True),
     Control("A3", "Consent captured on ad lead forms", "Paid ads", "Must", "Not built", simulated=True),
     Control("A4", "Wording check on ad copy", "Paid ads", "Should", "Not built", simulated=True),
-    Control("A5", "WhatsApp STOP honoured", "Paid ads", "Must", "Not built", simulated=True),
+    Control("A5", "WhatsApp STOP honoured", "Paid ads", "Must", "Not built", simulated=True,
+            note="WhatsApp sends exist (controlled test number only); STOP replies are not read yet."),
     Control("A6", "Audience list type recorded (company or contact)", "Paid ads", "Later", "Not built", simulated=True),
     Control("B1", "Approval bound to the exact text (edits invalidate it)", "Trust", "Must", "Live"),
     Control("B2", "Any reply stops the sequence before analysis", "Trust", "Must", "Live"),

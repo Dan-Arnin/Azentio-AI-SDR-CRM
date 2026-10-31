@@ -58,7 +58,7 @@ def sdr(app_client):
 @pytest.fixture(scope="module")
 def campaign(mgr):
     out = mgr.post("/v1/campaigns", json=GCC).json()
-    assert len(out["enrollments"]) == 5
+    assert len(out["enrollments"]) >= 5  # Heads of Compliance at GCC banks in the prospect directory
     return out
 
 
@@ -213,3 +213,20 @@ def test_erase_request_anonymises_and_keeps_the_opt_out(admin, mgr):
     assert is_suppressed(email)  # the opt-out still works, held only as a hash
     sup = mgr.get("/v1/governance/records/suppressions").json()["rows"]
     assert not any(email in s["value"] for s in sup)
+
+
+def test_whatsapp_send_is_skipped_for_a_suppressed_contact_and_counted(mgr, campaign):
+    lead_id = campaign["enrollments"][-1]["leadId"]
+    r = mgr.post(f"/v1/leads/{lead_id}/sms-draft", json={})
+    assert r.status_code in (200, 201), r.text
+    d = r.json()
+    assert mgr.post(f"/v1/drafts/{d['id']}/approve", json={"reviewer": "x", "contentHash": d["contentHash"]}).status_code == 200
+    lead = mgr.get(f"/v1/leads/{lead_id}").json()
+    email = (lead.get("lead") or lead)["normalizedEmail"]
+    assert mgr.post("/v1/governance/suppressions", json={"value": email, "reason": "asked us to stop"}).status_code == 201
+    before = len(audit_rows("send.blocked"))
+    r = mgr.post(f"/v1/drafts/{d['id']}/send-sms", json={"channel": "whatsapp"})
+    assert r.status_code == 409 and r.json()["detail"]["code"] == "contact_blocked"
+    rows = audit_rows("send.blocked")
+    assert len(rows) == before + 1 and rows[-1][0] == "mgr.hana"
+    assert not [m for m in mgr.get(f"/v1/leads/{lead_id}").json().get("messages", []) if m.get("draftId") == d["id"]]

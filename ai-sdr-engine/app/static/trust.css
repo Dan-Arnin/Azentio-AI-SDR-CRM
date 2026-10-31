@@ -123,9 +123,3 @@ mark.tr-hl { background: #ffe08a; color: inherit; padding: 0 2px; border-radius:
   .tr-audit li { grid-template-columns: 34px minmax(0, 1fr); }
   .tr-audit time { grid-column: 2; }
 }
-
-/* Shell fix: the top bar overflowed between ~760px and ~1280px (seven nav items plus the action buttons).
-   Labels are hidden visually there but stay in the accessibility tree. */
-@media (min-width: 761px) and (max-width: 1279px) {
-  .nav a span.lbl { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); clip-path: inset(50%); white-space: nowrap; }
-}

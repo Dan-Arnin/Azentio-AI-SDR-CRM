@@ -48,6 +48,10 @@ def check_send_gates(draft: Draft, lead: Lead) -> None:
     from app.engine.identity import is_suppressed
     from app.governance import store
 
+    if draft.kind == "linkedin_note":
+        raise ValueError("linkedin_manual_step")
+    if draft.kind == "sms_message":
+        raise ValueError("sms_uses_messaging_send")
     # the suppression list is checked live, so entries added after intake (domain blocks, erasures) still stop the send
     if lead.suppressed or lead.input.contactPermission != "allowed" or is_suppressed(lead.normalizedEmail):
         raise ValueError("contact_blocked")

@@ -10,7 +10,7 @@ from app import db
 from app.contracts import Assessment, Campaign, Draft, Enrollment, Lead, Message, Run
 from app.engagement import clock
 from app.engagement.transport import GLOBAL_DAILY_CAP, PER_CONTACT_DAILY_CAP
-from app.governance import guardrails, rights, store
+from app.governance import gates, guardrails, rights, store
 from app.llm.calllog import AiCall
 
 # Audit actions only a Portal Admin may read (users, roles, ICP, reset, sign-in, data rights, retention)
@@ -45,7 +45,7 @@ def visible_audit(rows: list[dict[str, Any]], user: dict[str, Any]) -> list[dict
 class Data:
     """One snapshot of the store, scoped to a campaign when asked."""
 
-    def __init__(self, campaign: Optional[str] = None):
+    def __init__(self, campaign: Optional[str] = None, channel: Optional[str] = None):
         self.campaigns = db.list_("campaigns", Campaign, limit=100000)
         self.enrollments = db.list_("enrollments", Enrollment, limit=100000)
         leads = db.list_("leads", Lead, limit=100000)
@@ -57,6 +57,10 @@ class Data:
         self.drafts = [d for d in db.list_("drafts", Draft, limit=100000) if keep(d)]
         self.draft_by_id = {d.id: d for d in self.drafts}
         self.messages = [m for m in db.list_("messages", Message, limit=100000) if keep(m)]
+        if channel:  # email, sms, whatsapp or linkedin
+            self.messages = [m for m in self.messages if m.direction == "inbound" or gates.channel_of(self.draft_by_id.get(m.draftId), m.subject) == channel]
+            self.drafts = [d for d in self.drafts if gates.channel_of(d) == channel or (channel == "whatsapp" and d.kind == "sms_message")]
+            self.draft_by_id = {d.id: d for d in self.drafts}
         self.assessments = sorted((a for a in db.list_("assessments", Assessment, limit=100000) if keep(a)), key=lambda a: a.createdAt)
         self.runs = [r for r in db.list_("runs", Run, limit=100000) if r.leadId in self.leads]
         self.suppressions = [s for s in db.list_("suppressions", rights._Row, limit=100000)]
@@ -224,10 +228,10 @@ def consent(d: Data, start: str, end: str) -> dict[str, Any]:
             row["withdrawn"] += 1
     return {"suppressionSize": len(d.suppressions), "byReason": dict(by_reason), "sendsBlocked": len(blocked),
             "noConsentHeld": len(held), "byChannel": channels,
-            "whatsapp": NOT_BUILT, "adsLeadForms": NOT_BUILT}
+            "whatsapp": {"status": "test_only"}, "adsLeadForms": NOT_BUILT}
 
 
-def sending(d: Data) -> dict[str, Any]:
+def sending(d: Data, days: int) -> dict[str, Any]:
     today = clock.demo_date(clock.demo_now())
     sent_today = [m for m in d.messages if m.direction == "outbound" and clock.demo_date(m.at) == today]
     paused = store.paused_campaigns()
@@ -241,7 +245,10 @@ def sending(d: Data) -> dict[str, Any]:
                      "blockedPaused": sum(1 for r in d.audit if r["action"] == "send.blocked" and r["detail"] == "campaign_paused"
                                           and (r["after"] or {}).get("enrollmentId") in ids),
                      "prospectSource": "Simulated prospect directory"})
+    start, end, _ = window(days)
+    by_channel = Counter(gates.channel_of(d.draft_by_id.get(m.draftId), m.subject) for m in d.messages if m.direction == "outbound" and _in(m.at, start, end))
     return {"sentToday": len(sent_today), "dailyCap": GLOBAL_DAILY_CAP, "perContactCap": PER_CONTACT_DAILY_CAP,
+            "sentByChannel": {c: by_channel.get(c, 0) for c in ("email", "sms", "whatsapp", "linkedin")},
             "capBlocks": sum(1 for r in d.audit if r["action"] == "send.blocked" and r["detail"] == "send_cap"),
             "campaigns": rows, "businessHours": NOT_BUILT, "ads": NOT_BUILT}
 
@@ -255,16 +262,16 @@ def data_rights(d: Data, start: str, end: str) -> dict[str, Any]:
             "retention": rights.retention_state()}
 
 
-def governance_report(user: dict[str, Any], days: int = 14, campaign: Optional[str] = None) -> dict[str, Any]:
+def governance_report(user: dict[str, Any], days: int = 14, campaign: Optional[str] = None, channel: Optional[str] = None) -> dict[str, Any]:
     rights.run_retention_if_due()
-    d = Data(campaign)
+    d = Data(campaign, channel)
     start, end, _ = window(days)
     from app.governance.controls import register
 
     panels = {"oversight": oversight(d, start, end), "evidence": evidence(d, start, end), "guardrails": guardrail_panel(d, start, end),
-              "consent": consent(d, start, end), "sending": sending(d), "dataRights": data_rights(d, start, end),
+              "consent": consent(d, start, end), "sending": sending(d, days), "dataRights": data_rights(d, start, end),
               "audit": visible_audit([r for r in d.audit if _in(r["at"], start, end)], user)[:20]}
-    report = {"period": {"days": days, "start": start, "end": end, "campaign": campaign}, "tiles": tiles(d, user, days), "panels": panels,
+    report = {"period": {"days": days, "start": start, "end": end, "campaign": campaign, "channel": channel}, "tiles": tiles(d, user, days), "panels": panels,
               "campaigns": [{"id": c.id, "name": c.name} for c in d.campaigns], "generatedAt": datetime.now(timezone.utc).isoformat()}
     report["register"] = register(report)
     return report
@@ -285,13 +292,14 @@ def my_summary(user: dict[str, Any], days: int = 14) -> dict[str, Any]:
 
 # ---------------------------------------------------------------- drill-down records
 
-def records(kind: str, user: dict[str, Any], days: int = 14, campaign: Optional[str] = None, q: str = "") -> dict[str, Any]:
-    d = Data(campaign)
+def records(kind: str, user: dict[str, Any], days: int = 14, campaign: Optional[str] = None, q: str = "",
+            channel: Optional[str] = None) -> dict[str, Any]:
+    d = Data(campaign, channel)
     start, end, _ = window(days)
     name = lambda lid: d.leads[lid].input.fullName if lid in d.leads else lid  # noqa: E731
     rows: list[dict[str, Any]]
     if kind == "sends":
-        rows = [{"at": m.at, "leadId": m.leadId, "lead": name(m.leadId), "subject": m.subject, "approvedBy": (dr.approvedBy if (dr := d.draft_by_id.get(m.draftId)) else None),
+        rows = [{"at": m.at, "leadId": m.leadId, "lead": name(m.leadId), "channel": gates.channel_of(d.draft_by_id.get(m.draftId), m.subject), "subject": m.subject, "approvedBy": (dr.approvedBy if (dr := d.draft_by_id.get(m.draftId)) else None),
                  "approvedAt": dr.approvedAt if dr else None, "transport": m.transport}
                 for m in d.messages if m.direction == "outbound" and _in(m.at, start, end)]
     elif kind == "approvals":

@@ -103,7 +103,9 @@
           "bank",
           "nbfc"
         ],
-        "partial": []
+        "partial": [
+          "islamic_bank"
+        ]
       },
       "keywords": [
         "lending",

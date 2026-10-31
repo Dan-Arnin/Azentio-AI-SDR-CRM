@@ -1,4 +1,4 @@
-# app/engine/qualify.py - BANT assessment, qualification scoring and deterministic route selection
+# app/engine/qualify.py - BANT assessment, intent strength, objections/competitors, qualification scoring and deterministic route selection
 from __future__ import annotations
 
 import asyncio
@@ -6,12 +6,12 @@ import re
 from calendar import monthrange
 from datetime import date
 from math import isfinite
-from typing import Optional
+from typing import Any, Optional
 
 from app import config
 from app.contracts import BANT_KEYS, Assessment, BantField, DecisionResult, Evidence, Lead, Message
 from app.engine.extraction import Extraction, extract_bant, fixture_extract
-from app.llm.decisions import UNSUBSCRIBE_RE, decide, refusal_result
+from app.llm.decisions import UNSUBSCRIBE_RE, decide, intent_strength, refusal_result
 
 GAP_ORDER = ("need", "timeline", "authority", "budget")
 SCORE = {"confirmed": 25, "inferred": 10, "missing": 0, "conflict": 0}
@@ -218,8 +218,10 @@ def _merge_field(key: str, ext: Extraction, decision: DecisionResult, reply: Mes
     return BantField(status=status, evidence=[ev] + [e for e in base.evidence if e.origin != "buyer_statement"], note=note)
 
 
-# Route by precedence: suppression -> existing owner -> outside ICP -> intent -> BANT; returns (route, reasons, gap_eligible)
-def _route(lead: Lead, reply: Message, decision: DecisionResult, bant: dict[str, BantField]) -> tuple[str, list[str], bool]:
+# Route by precedence: suppression -> existing owner -> outside ICP -> intent -> objections/intent strength -> BANT;
+# returns (route, reasons, gap_eligible)
+def _route(lead: Lead, reply: Message, decision: DecisionResult, bant: dict[str, BantField], strength: str,
+           objections: list[dict[str, Any]]) -> tuple[str, list[str], bool]:
     if UNSUBSCRIBE_RE.search(reply.body):
         return "suppressed", ["Explicit removal request in reply (keyword rule); suppressed immediately."], False
     gate = _gate_route(lead)
@@ -241,18 +243,31 @@ def _route(lead: Lead, reply: Message, decision: DecisionResult, bant: dict[str,
         return "human_review", [f"Reply needs a human decision: {tag}."], False
     unresolved = _unresolved(bant)
     icp_ok = bool(lead.icp and lead.icp.status == "matches_icp")
-    if icp_ok and not unresolved:
-        return "rep_review", [f"ICP match, all four BANT fields confirmed by verified buyer excerpts, {tag}."], False
+    if objections:
+        first = objections[0]
+        return "human_review", [f"Unresolved {first['type']} objection (\"{first['excerpt']}\"); an SDR addresses it before any AE "
+                                f"handoff, {tag}."], bool(unresolved)
+    if icp_ok and not unresolved and strength == "buying":
+        return "rep_review", [f"ICP match, all four BANT fields confirmed by verified buyer excerpts, buying intent, {tag}."], False
     why = [] if icp_ok else [f"ICP status is {lead.icp.status if lead.icp else 'unknown'}, not matches_icp"]
+    if strength != "buying":
+        why.append(f"intent strength is {strength}, not buying (needs SDR nurture/qualification)")
     if unresolved:
         why.append("BANT unresolved: " + ", ".join(f"{k} {bant[k].status}" for k in unresolved))
     return "human_review", [f"Interested ({conf:.2f}) but not ready for AE: {'; '.join(why)}."], True
 
 
 # Human-readable next action for the chosen route and context
-def _next_action(route: str, decision: DecisionResult, ext: Extraction, next_question_key: Optional[str]) -> str:
+def _next_action(route: str, decision: DecisionResult, ext: Extraction, next_question_key: Optional[str],
+                 strength: str = "none", objections: Optional[list[dict[str, Any]]] = None) -> str:
     if route != "human_review":
         return NEXT_ACTION[route]
+    if objections and not decision.refusal and decision.intent not in ("referral", "out_of_office", "wrong_person"):
+        first = objections[0]
+        action = f"Address {first['type']} objection: {first['handling']}"
+        if ext.pricingOrCommercialAsk:
+            action += " Pricing question goes to a specialist owner - not auto-answered."
+        return action
     if ext.pricingOrCommercialAsk:
         return "Specialist owner: answer pricing/commercial question — not auto-answered"
     if decision.refusal or (decision.intentConfidence < config.INTENT_CONFIDENCE_FLOOR and decision.intent != "interested"):
@@ -268,7 +283,27 @@ def _next_action(route: str, decision: DecisionResult, ext: Extraction, next_que
         return f"SDR: send one gap-fill question about {next_question_key} (awaiting approval)"
     if decision.intent == "interested":
         return "SDR: review BANT gaps — gap-fill already used this cycle"
+    if strength == "exploring":
+        return "SDR: nurture — share relevant insight and qualify; not ready for AE"
     return "SDR: review reply manually"
+
+
+# Merge prior competitor mentions with new ones (dedupe by name, newest excerpt wins)
+def _merge_competitors(prior: Optional[Assessment], ext: Extraction) -> list[dict[str, Any]]:
+    merged = {c.name.lower(): c.model_dump() for c in ext.competitors}
+    for old in (prior.competitors if prior else []):
+        merged.setdefault(str(old.get("name", "")).lower(), old)
+    return [c for k, c in merged.items() if k]
+
+
+# Merge prior buying signals with new ones (dedupe overlapping excerpts, newest first)
+def _merge_signals(prior: Optional[Assessment], ext: Extraction) -> list[dict[str, Any]]:
+    out = [s.model_dump() for s in ext.buyingSignals]
+    for old in (prior.buyingSignals if prior else []):
+        excerpt = str(old.get("excerpt") or "")
+        if excerpt and not any(excerpt in s["excerpt"] or s["excerpt"] in excerpt for s in out):
+            out.append(old)
+    return out
 
 
 # Assess a buyer reply: extraction + decision in parallel, deterministic merge, scoring and routing
@@ -315,13 +350,22 @@ async def assess_reply(lead: Lead, reply: Message, thread: list[Message], prior:
     bant = {k: _merge_field(k, ext, decision, reply, prior_bant.get(k), base[k]) for k in BANT_KEYS}
     bant_score, qual = _scores(lead, bant)
     unresolved = _unresolved(bant)
-    route, reasons, gap_eligible = _route(lead, reply, decision, bant)
+    objections = [o.model_dump() for o in ext.objections]
+    competitors = _merge_competitors(prior, ext)
+    signals = _merge_signals(prior, ext)
+    strength = intent_strength(decision, len(signals), sum(1 for k in BANT_KEYS if bant[k].status == "confirmed"))
+    route, reasons, gap_eligible = _route(lead, reply, decision, bant, strength, objections)
+    if route in ("suppressed", "closed"):
+        strength = "none"
     next_question, nq_key = None, None
     if route == "human_review" and gap_eligible and lead.gapFillsSent < 1 and not ext.pricingOrCommercialAsk:
         next_question = next_question_for(unresolved)
         nq_key = next((k for k in GAP_ORDER if k in unresolved), None)
     if ext.pricingOrCommercialAsk:
         reasons.append("Pricing/commercial question needs specialist owner — not auto-answered.")
+    if ext.competitors:
+        reasons.append("Competitor/incumbent mentioned: " + ", ".join(f"{c.name} (\"{c.excerpt}\")" for c in ext.competitors)
+                       + " — position on approved strengths; never disparage.")
     if ext.mentionedPeople:
         reasons.append("Mentioned people: " + ", ".join(
             p.name + (f" ({p.role})" if p.role else "") + (f" <{p.email}>" if p.email else "") for p in ext.mentionedPeople) + ".")
@@ -335,6 +379,7 @@ async def assess_reply(lead: Lead, reply: Message, thread: list[Message], prior:
         icp=lead.icp, replyIntent=decision.intent, intentConfidence=decision.intentConfidence,
         bant=bant, bantScore=bant_score, qualificationScore=qual, missingFields=unresolved,
         route=route, routeReasons=reasons, nextQuestion=next_question,
-        nextAction=_next_action(route, decision, ext, nq_key), decision=decision, mode=mode,
+        nextAction=_next_action(route, decision, ext, nq_key, strength, objections), decision=decision,
+        intentStrength=strength, objections=objections, competitors=competitors, buyingSignals=signals, mode=mode,
         droppedQuotes=[{"field": d.field, "excerpt": d.excerpt[:200], "reason": d.reason} for d in ext.dropped],
     )

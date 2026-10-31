@@ -17,7 +17,8 @@ def edit_draft(draft: Draft, subject: Optional[str], body: Optional[str]) -> Dra
         raise ValueError("not_editable")
     new_subject = (subject if subject is not None else draft.subject).strip()
     new_body = finalize_body(body) if body is not None else draft.body
-    flags = check_guardrails(new_subject, new_body, draft.claimIds)
+    flags = check_guardrails(new_subject, new_body, draft.claimIds,
+                             channel={"sms_message": "text", "linkedin_note": "linkedin"}.get(draft.kind, "email"))
     if draft.unresolvedClaims and "unsupported_claim" not in flags:
         flags.append("unsupported_claim")
     updated = draft.model_copy(update={

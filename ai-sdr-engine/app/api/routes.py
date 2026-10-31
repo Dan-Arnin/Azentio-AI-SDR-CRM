@@ -270,12 +270,16 @@ async def send(draft_id: str, request: Request) -> Any:
 # Create an outbound campaign: cohort -> enrollments -> touch drafts awaiting approval
 @router.post("/campaigns", status_code=201, tags=["campaigns"])
 async def create_campaign(inp: CampaignInput, request: Request) -> Any:
+    from app.api.campaign_channels import schedule_channel_drafts
     result = await aguarded(pipeline.create_campaign(inp))
-    if isinstance(result, dict) and result.get("campaign"):
-        c = result["campaign"]
-        gov_store.audit(*gov_auth.actor(request, "workspace user"), "campaign.launched", "campaign", c.id if hasattr(c, "id") else c.get("id"),
+    if isinstance(result, dict):
+        c = result.get("campaign") or result
+        cid = c.id if hasattr(c, "id") else c.get("id")
+        if cid and any(ch != "email" for ch in inp.channels):
+            schedule_channel_drafts(cid, list(inp.channels))
+        gov_store.audit(*gov_auth.actor(request, "workspace user"), "campaign.launched", "campaign", cid,
                         after={"name": inp.name, "cohort": inp.cohort.model_dump(), "touchDays": inp.touchDays,
-                               "enrolled": len(result.get("enrollments") or [])})
+                               "channels": list(inp.channels), "enrolled": len(result.get("enrollments") or [])})
     return result
 
 
@@ -283,13 +287,15 @@ async def create_campaign(inp: CampaignInput, request: Request) -> Any:
 @router.get("/campaigns", tags=["campaigns"])
 def list_campaigns() -> dict[str, Any]:
     from app import db
+    from app.api.campaign_channels import campaign_channels, channel_stats
     from app.contracts import Campaign, Enrollment
 
     items = []
     for c in reversed(db.list_("campaigns", Campaign)):
         enrollments = [e for e in (db.get("enrollments", eid, Enrollment) for eid in c.enrollmentIds) if e]
         states = [e.state for e in enrollments]
-        items.append({**c.model_dump(mode="json"), "enrolled": len(states),
+        stats = channel_stats(c, enrollments)
+        items.append({**c.model_dump(mode="json"), "channels": campaign_channels(c, stats), "channelStats": stats, "enrolled": len(states),
                       "states": {s: states.count(s) for s in set(states)},
                       "leadIds": [e.leadId for e in enrollments]})
     return {"items": items}

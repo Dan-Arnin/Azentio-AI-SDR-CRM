@@ -32,16 +32,18 @@ Governance tables (`gov_audit`, `gov_flags`, `gov_requests`, `gov_settings`) are
 
 - **Wording checks** (`drafting.check_guardrails`): overclaim, regulator claim, outside link and missing opt-out line now block a draft, like pricing and guarantees already did. A manager can clear a false positive with a reason; when every blocking flag is cleared, the draft returns for approval.
 - **Hidden instructions in replies** (`qualify.assess_reply`): a reply that tries to instruct the system keeps the previous score, goes to a person, and is flagged with the quoted text.
-- **Send gate** (`transport.check_send_gates`): the suppression list is checked live at every send (email, blocked domain, erased hash), and paused campaigns cannot send.
+- **Send gate** (`transport.check_send_gates` for email, `governance/gates.py` for SMS/WhatsApp and LinkedIn): the suppression list is checked live at every send on every channel (email, blocked domain, erased hash), paused campaigns cannot send, and every send or blocked send is audit-logged with its channel.
 - **Erasure** (`governance/rights.py`): anonymises the lead, its messages, drafts, quotes, tasks and run notes; keeps the opt-out as a hash; emits `lead.erased` so the CRM backend scrubs its copy.
 
 ## Evidence pack
 
 `GET /v1/governance/export` downloads `evidence-pack_<date>_<days>d.zip` with `controls.csv`, `audit.csv`, `panels.json` and `summary.html`. The export itself is audit-logged.
 
-## Not built (shown as such on the page)
+## Channels
 
-LinkedIn/Google Ads, WhatsApp, ad lead forms, ad audience sync and business-hours deferral. Their controls appear in the register as **Not built**, never as zero.
+Email, SMS, WhatsApp and LinkedIn are built; SMS/WhatsApp and LinkedIn send only to controlled test recipients. The channel filter narrows sends and drafts to one channel.
+
+**Not built** (shown as such, never as zero): LinkedIn Ads and Google Ads, ad lead forms, ad audience sync, business-hours deferral, and reading WhatsApp STOP replies.
 
 ## Controls register
 
@@ -49,4 +51,4 @@ LinkedIn/Google Ads, WhatsApp, ad lead forms, ad audience sync and business-hour
 
 ## Tests
 
-`uv run --with pytest python -m pytest -q tests` (12 checks from the spec: role access, one audit event per approve/reject/edit, append-only audit, reason required, suppression at send, injection, opt-outs, prompt log without values, evidence pack counts, erasure).
+`uv run --with pytest python -m pytest -q tests` (13 checks from the spec, including WhatsApp sends skipped for a suppressed contact: role access, one audit event per approve/reject/edit, append-only audit, reason required, suppression at send, injection, opt-outs, prompt log without values, evidence pack counts, erasure).

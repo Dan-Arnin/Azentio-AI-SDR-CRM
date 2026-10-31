@@ -2,10 +2,12 @@
 // Trust & governance page (#/trust). Roles are checked on the server; every figure opens the records behind it.
 // Uses the console's shared helpers (h, icon, $, S, toast, openModal, closeModal, fmtDate, initials, refresh).
 
-const TR = { user: undefined, users: [], pick: "mgr.hana", report: null, summary: null, days: 30, campaign: "", channel: "email", area: "", err: null, signErr: "" };
+const TR = { user: undefined, users: [], pick: "mgr.hana", report: null, summary: null, days: 30, campaign: "", channel: "", area: "", err: null, signErr: "" };
 const TR_AREAS = ["Security", "Compliance", "Trust", "Paid ads"];
 const TR_PANEL_AREAS = { oversight: ["Trust"], evidence: ["Trust"], guardrails: ["Trust", "Security"], consent: ["Compliance"], sending: ["Compliance", "Paid ads"], dataRights: ["Compliance"], audit: ["Security"] };
-const TR_CHANNELS = [["email", "Email"], ["linkedin", "LinkedIn Ads"], ["google", "Google Ads"], ["whatsapp", "WhatsApp"]];
+const TR_CHANNELS = [["", "All channels"], ["email", "Email"], ["sms", "SMS"], ["whatsapp", "WhatsApp"], ["linkedin", "LinkedIn"], ["linkedin_ads", "LinkedIn Ads"], ["google_ads", "Google Ads"]];
+const TR_BUILT = ["", "email", "sms", "whatsapp", "linkedin"];
+const trQuery = () => "days=" + TR.days + (TR.campaign ? "&campaign=" + encodeURIComponent(TR.campaign) : "") + (TR.channel && TR_BUILT.includes(TR.channel) ? "&channel=" + TR.channel : "");
 const TR_ACTIONS = {
   "draft.approved": "approved a draft", "draft.rejected": "rejected a draft", "draft.edited": "edited a draft", "send.sent": "sent an email",
   "send.blocked": "send blocked", "campaign.launched": "launched a campaign", "campaign.paused": "paused a campaign", "campaign.resumed": "resumed a campaign",
@@ -38,7 +40,7 @@ async function loadTrust() {
     TR.user = (await gapi("/v1/auth/me")).user;
     if (!TR.user) { TR.users = (await gapi("/v1/auth/users")).items || []; TR.report = TR.summary = null; return; }
     if (TR.user.permissions.includes("viewGovernance")) {
-      TR.report = await gapi("/v1/governance/report?days=" + TR.days + (TR.campaign ? "&campaign=" + encodeURIComponent(TR.campaign) : "")); TR.summary = null;
+      TR.report = await gapi("/v1/governance/report?" + trQuery()); TR.summary = null;
     } else { TR.summary = await gapi("/v1/governance/me?days=" + TR.days); TR.report = null; }
     TR.err = null;
   } catch (e) { TR.err = e.code; }
@@ -148,10 +150,11 @@ function trFilters() {
     h("div", { class: "grp" }, "Period", h("div", { class: "segs" }, [7, 14, 30, 90].map(d => h("button", { class: "seg", type: "button", "aria-pressed": String(TR.days === d), onclick: () => set("days", d) }, d + " days")))),
     h("label", { class: "grp" }, "Campaign", h("select", { onchange: e => set("campaign", e.target.value) }, h("option", { value: "" }, "All campaigns"),
       (r.campaigns || []).map(c => h("option", { value: c.id, selected: TR.campaign === c.id }, c.name)))),
-    h("label", { class: "grp" }, "Channel", h("select", { onchange: e => { TR.channel = e.target.value; render(); } }, TR_CHANNELS.map(([v, l]) => h("option", { value: v, selected: TR.channel === v }, l + (v === "email" ? "" : " (not built)"))))),
+    h("label", { class: "grp" }, "Channel", h("select", { onchange: e => { TR.channel = e.target.value; if (TR_BUILT.includes(TR.channel)) refresh(true); else render(); } },
+      TR_CHANNELS.map(([v, l]) => h("option", { value: v, selected: TR.channel === v }, l + (TR_BUILT.includes(v) ? "" : " (not built)"))))),
     h("label", { class: "grp" }, "Area", h("select", { onchange: e => { TR.area = e.target.value; render(); } }, h("option", { value: "" }, "All areas"), TR_AREAS.map(a => h("option", { value: a, selected: TR.area === a }, a)))),
     h("span", { class: "spacer" }),
-    h("button", { class: "btn sm", type: "button", onclick: e => trDo(e.currentTarget, () => trDownload("/v1/governance/export?days=" + TR.days + (TR.campaign ? "&campaign=" + encodeURIComponent(TR.campaign) : ""), "evidence-pack.zip"), n => "Downloaded " + n) },
+    h("button", { class: "btn sm", type: "button", onclick: e => trDo(e.currentTarget, () => trDownload("/v1/governance/export?" + trQuery(), "evidence-pack.zip"), n => "Downloaded " + n) },
       icon("upload", "sm"), "Export evidence pack"));
 }
 function trTile(t) {
@@ -193,7 +196,7 @@ function trAuditList(rows) {
 
 function trFull() {
   const r = TR.report, P = r.panels, canAdmin = TR.user.permissions.includes("handleDataRequests");
-  if (TR.channel !== "email") {
+  if (!TR_BUILT.includes(TR.channel)) {
     const label = (TR_CHANNELS.find(c => c[0] === TR.channel) || [])[1];
     return h("div", null, trHeader(["Human oversight, consent ", "and audit"], ""), trFilters(),
       h("section", { class: "card" }, h("div", { class: "card-body empty" }, h("div", { class: "ico" }, icon("minus")), h("h3", null, label + " is not built in this workspace"),
@@ -236,11 +239,14 @@ function trFull() {
           trStat(cs.noConsentHeld, "Leads held: no consent", "suppressions")),
         h("div", { class: "tr-sec" }, h("h3", null, "Suppression list by reason"), Object.keys(cs.byReason).length ? Object.entries(cs.byReason).map(([k, v]) => h("div", { class: "tr-kv" }, h("span", null, k), h("b", null, v))) : h("p", { class: "muted small" }, "The list is empty.")),
         h("div", { class: "tr-sec" }, h("h3", null, "Consent by channel"), Object.entries(cs.byChannel).map(([k, v]) => h("div", { class: "tr-kv" }, h("span", null, k), h("b", null, `${v.granted} granted · ${v.notGranted} not granted · ${v.withdrawn} withdrawn`))),
-          trNotBuilt("WhatsApp"), trNotBuilt("Ad lead forms"))),
+          h("div", { class: "tr-kv" }, h("span", null, "SMS, WhatsApp and LinkedIn"), h("span", { class: "tr-tag", title: "Sends go only to controlled test recipients" }, "Test recipients only")),
+          trNotBuilt("Ad lead forms"))),
       trPanel("sending", "Sending & channels", "Daily caps, campaign pauses and where prospects come from.", ["C2", "C4", "A1", "A2", "A6"],
         h("div", { class: "tr-kv" }, h("span", null, "Sent today vs daily cap"), h("b", null, sd.sentToday + " of " + sd.dailyCap)),
         h("div", { class: "tr-bar", role: "img", "aria-label": sd.sentToday + " of " + sd.dailyCap + " sent today" }, h("span", { style: `width:${Math.min(100, sd.sentToday / sd.dailyCap * 100)}%;background:var(--ink)` })),
         h("div", { class: "tr-kv" }, h("span", null, "Per-contact daily cap"), h("b", null, sd.perContactCap)),
+        h("div", { class: "tr-kv" }, h("span", null, "Sent in period by channel"), h("button", { class: "tr-link", type: "button", onclick: () => trDrill("sends") },
+          Object.entries(sd.sentByChannel || {}).map(([k, v]) => ({ email: "Email", sms: "SMS", whatsapp: "WhatsApp", linkedin: "LinkedIn" })[k] + " " + v).join(" · "))),
         h("div", { class: "tr-kv" }, h("span", null, "Sends held by the cap"), h("button", { class: "tr-link", type: "button", onclick: () => trDrill("blocked") }, String(sd.capBlocks))),
         h("div", { class: "tr-sec" }, h("h3", null, "Campaigns"), sd.campaigns.length ? sd.campaigns.map(c => h("div", { class: "tr-kv" },
           h("span", null, h("b", null, c.name), " ", trStatus(c.status), " ", trSim(), h("div", { class: "muted small" }, `${c.enrolled} enrolled · ${c.sentToday} sent today` + (c.blockedPaused ? ` · ${c.blockedPaused} held while paused` : ""))),
@@ -292,7 +298,7 @@ const TR_TITLES = { sends: "Emails sent", approvals: "Drafts and approvals", quo
   requests: "Export and erase requests", suppressions: "Suppression list", blocked: "Blocked sends", prompts: "Model calls (field names only)" };
 const leadCell = (id, name) => id ? h("a", { href: "#/leads/" + id, onclick: closeModal }, name || "Lead") : (name || "–");
 const TR_COLS = {
-  sends: [["When", r => fmtDate(r.at)], ["Lead", r => leadCell(r.leadId, r.lead)], ["Subject", r => r.subject], ["Approved by", r => r.approvedBy ? trWho(r.approvedBy) : h("b", { class: "tr-err" }, "Not approved")], ["Approved", r => fmtDate(r.approvedAt)]],
+  sends: [["When", r => fmtDate(r.at)], ["Lead", r => leadCell(r.leadId, r.lead)], ["Channel", r => r.channel], ["Subject", r => r.subject], ["Approved by", r => r.approvedBy ? trWho(r.approvedBy) : h("b", { class: "tr-err" }, "Not approved")], ["Approved", r => fmtDate(r.approvedAt)]],
   approvals: [["Created", r => fmtDate(r.at)], ["Lead", r => leadCell(r.leadId, r.lead)], ["Subject", r => r.subject], ["Status", r => r.status.toLowerCase().replace("_", " ")], ["Version", r => r.version], ["Approved by", r => r.approvedBy ? trWho(r.approvedBy) : "–"], ["Engine", r => r.engine]],
   quotes: [["Lead", r => leadCell(r.leadId, r.lead)], ["Signal", r => r.field], ["Quote", r => "“" + r.excerpt + "”"], ["Result", r => r.result === "verified" ? h("span", { class: "tr-status live" }, icon("check"), "Verified") : h("span", { class: "tr-status partial" }, icon("alert"), "Dropped: " + (r.reason || "not in reply"))]],
   optouts: [["Lead", r => leadCell(r.leadId, r.name)], ["Opted out", r => fmtDate(r.at)], ["Reason", r => r.reason], ["Emails sent afterwards", r => h("b", { class: r.sentAfter ? "tr-err" : null }, r.sentAfter)], ["Sends blocked afterwards", r => r.blockedAfter]],
@@ -305,7 +311,7 @@ const TR_COLS = {
 async function trDrill(kind) {
   if (!kind) return;
   let data;
-  try { data = await gapi(`/v1/governance/records/${kind}?days=${TR.days}` + (TR.campaign ? "&campaign=" + encodeURIComponent(TR.campaign) : "")); }
+  try { data = await gapi(`/v1/governance/records/${kind}?` + trQuery()); }
   catch (e) { toast(trErr(e), "err"); return; }
   const rows = data.rows || [];
   const body = h("div", { class: "modal-body" });

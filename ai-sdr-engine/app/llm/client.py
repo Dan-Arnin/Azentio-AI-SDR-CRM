@@ -25,6 +25,8 @@ class LLMUnavailable(RuntimeError):
 # Build an AsyncOpenAI client for the configured backend (re-reads Codex auth each call so refreshed tokens are picked up)
 def make_client() -> AsyncOpenAI:
     if config.LLM_BACKEND == "api_key":
+        if not config.OPENAI_API_KEY:
+            raise LLMUnavailable("OPENAI_API_KEY is not set")  # callers fall back to templates and rules
         return AsyncOpenAI(api_key=config.OPENAI_API_KEY)
     try:
         tokens = json.loads(config.CODEX_AUTH_PATH.read_text())["tokens"]

@@ -1,4 +1,4 @@
-# app/llm/decisions.py - Reply-intent + BANT evidence-support judgments (OpenAI Decisions API | Agents SDK judge | fixture)
+# app/llm/decisions.py - Reply-intent + BANT evidence-support judgments (OpenAI Decisions API | Agents SDK judge | fixture) and intent strength
 from __future__ import annotations
 
 import re
@@ -106,6 +106,22 @@ async def decide(reply_text: str, spans: dict[str, str | None]) -> DecisionResul
     result.rationale = f"All live providers failed ({'; '.join(errors)}); keyword fallback, capped below confidence floor."[:800]
     result.durationMs = int((time.perf_counter() - started) * 1000)
     return result
+
+
+NO_INTENT = {"not_interested", "unsubscribe", "out_of_office", "wrong_person"}
+
+
+# Buying vs exploring vs no intent, derived deterministically (never by the model). Rule:
+#   none      - refusal, or intent is not_interested / unsubscribe / out_of_office / wrong_person
+#   buying    - intent is interested at or above the confidence floor AND (>=1 verified buying signal OR >=2 confirmed BANT)
+#   exploring - everything else (curiosity, research/pricing questions, hedged or deferred interest, referrals)
+def intent_strength(decision: DecisionResult, buying_signals: int, confirmed_bant: int) -> Literal["buying", "exploring", "none"]:
+    if decision.refusal or decision.intent in NO_INTENT:
+        return "none"
+    if (decision.intent == "interested" and decision.intentConfidence >= config.INTENT_CONFIDENCE_FLOOR
+            and (buying_signals >= 1 or confirmed_bant >= 2)):
+        return "buying"
+    return "exploring"
 
 
 # Build a refusal/failed DecisionResult that forces human review downstream

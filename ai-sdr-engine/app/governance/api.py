@@ -19,6 +19,7 @@ from app.governance import auth, guardrails, report, rights, store
 
 router = APIRouter(prefix="/v1", tags=["governance"])
 Days = Query(14, ge=1, le=90)
+Channel = Literal["email", "sms", "whatsapp", "linkedin"]
 VALUE_RE = re.compile(r"([a-z0-9._%+-]+)?@[a-z0-9-]+(\.[a-z0-9-]+)+")  # email or "@domain"
 
 
@@ -77,9 +78,9 @@ def me(request: Request) -> dict[str, Any]:
 # ---------------------------------------------------------------- report and records
 
 @router.get("/governance/report")
-def get_report(request: Request, days: int = Days, campaign: Optional[str] = None) -> dict[str, Any]:
+def get_report(request: Request, days: int = Days, campaign: Optional[str] = None, channel: Optional[Channel] = None) -> dict[str, Any]:
     user = auth.require(request, "viewGovernance")
-    return report.governance_report(user, days, campaign)
+    return report.governance_report(user, days, campaign, channel)
 
 
 @router.get("/governance/me")
@@ -88,12 +89,13 @@ def get_my_summary(request: Request, days: int = Days) -> dict[str, Any]:
 
 
 @router.get("/governance/records/{kind}")
-def get_records(kind: str, request: Request, days: int = Days, campaign: Optional[str] = None, q: str = "") -> dict[str, Any]:
+def get_records(kind: str, request: Request, days: int = Days, campaign: Optional[str] = None, q: str = "",
+                channel: Optional[Channel] = None) -> dict[str, Any]:
     user = auth.require(request, "viewGovernance")
     if kind == "requests":
         auth.require(request, "handleDataRequests")
     try:
-        return report.records(kind, user, days, campaign, q[:100])
+        return report.records(kind, user, days, campaign, q[:100], channel)
     except ValueError:
         raise HTTPException(404, detail={"code": "unknown_kind"})
 
