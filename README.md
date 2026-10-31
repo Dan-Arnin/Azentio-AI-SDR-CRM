@@ -65,7 +65,7 @@ cd backend && TEST_DATABASE_URL=postgresql://sdr:sdr@localhost:5433/sdr_test pyt
 
 Free-tier behaviour to plan around:
 - Services sleep after 15 minutes idle; the first request takes 30–60 s. Open both `/health` URLs a few minutes before presenting.
-- The engine stores data in SQLite on Render's temporary disk, so its records reset on every redeploy or restart. Re-run the demo flow after deploying. The backend's data lives in Neon and persists.
+- Both services keep their data in Neon: the backend in the `public` schema, the engine in the `engine` schema (`ENGINE_DATABASE_URL`, copied from the backend's `DATABASE_URL` by the Blueprint). Data survives deploys, restarts and sleep. Locally, without `ENGINE_DATABASE_URL`, the engine uses SQLite as before.
 - Leave `EMAIL_TRANSPORT=simulated` unless sends are restricted to the controlled `DEMO_INBOX`.
 
 Test the backend image locally exactly as Render runs it: `docker build -f backend/Dockerfile .` (build from the repo root).
