@@ -1,0 +1,41 @@
+# Render Blueprint: Dashboard → New → Blueprint → pick this repo. Both services use the free plan.
+# Values marked sync: false are secrets: Render asks for them on first deploy; they never live in git.
+services:
+  # CRM backend (FastAPI + PostgreSQL). Applies db/migrations and db/seed on every start (idempotent).
+  - type: web
+    name: azentio-sdr-backend
+    runtime: docker
+    plan: free
+    dockerfilePath: ./backend/Dockerfile
+    dockerContext: .
+    healthCheckPath: /health
+    envVars:
+      - key: DATABASE_URL # Neon "direct" connection string, ending in ?sslmode=require
+        sync: false
+      - key: CORS_ORIGIN # comma-separated; add the Vercel URL once the frontend is live
+        value: http://localhost:3000
+      - key: DECISION_PROVIDER
+        value: fixture
+      - key: EMAIL_TRANSPORT
+        value: simulated
+
+  # AI SDR engine (contact form, sales workspace, /v1 workflow API). Keeps its own SQLite file.
+  - type: web
+    name: azentio-sdr-engine
+    runtime: python
+    plan: free
+    rootDir: ai-sdr-engine
+    buildCommand: pip install uv && uv sync --frozen
+    startCommand: uv run --frozen uvicorn app.main:app --host 0.0.0.0 --port $PORT
+    healthCheckPath: /health
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.12.7
+      - key: OPENAI_API_KEY # optional: without it the engine runs in fixture mode and routes more leads to human review
+        sync: false
+      - key: LLM_BACKEND
+        value: api_key
+      - key: EMAIL_TRANSPORT # switch to resend (plus RESEND_API_KEY, DEMO_INBOX) only for the controlled inbox
+        value: simulated
+      - key: DEMO_MODE
+        value: "true"

@@ -13,3 +13,5 @@ node_modules/
 dist/
 # local data
 *.db
+# accidental nested clone of this repo
+/Azentio-AI-SDR-CRM/
