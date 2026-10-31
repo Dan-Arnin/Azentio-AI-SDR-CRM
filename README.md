@@ -57,7 +57,7 @@ cd backend && TEST_DATABASE_URL=postgresql://sdr:sdr@localhost:5433/sdr_test pyt
 | `azentio-sdr-backend` | `backend/` in Docker. Applies migrations and seed on each start (safe to repeat) | `DATABASE_URL` from Neon |
 | `azentio-sdr-engine` | `ai-sdr-engine/`: contact form `/contact`, workspace `/workspace`, API `/v1` | `OPENAI_API_KEY` (optional: fixture mode without it) |
 
-1. **Neon:** create a project (region close to the demo, e.g. AWS Singapore or Frankfurt) → Connection details → turn **off** "Connection pooling" → copy the `postgresql://…?sslmode=require` string.
+1. **Neon:** create a project in **AWS Asia Pacific (Singapore)**, the same region as the Render services → Connection details → turn **off** "Connection pooling" → copy the `postgresql://…?sslmode=require` string.
 2. **Render:** Dashboard → New → Blueprint → select this repo and branch. Paste `DATABASE_URL` (and `OPENAI_API_KEY` if used) when asked. Secrets are entered only in Render, never committed.
 3. **Check:** `https://<backend>.onrender.com/ready` lists the applied migrations; `https://<engine>.onrender.com/health` returns `ok`.
 4. **Frontend (later):** deploy `frontend/` on Vercel, then add its URL to `CORS_ORIGIN` on the backend service.

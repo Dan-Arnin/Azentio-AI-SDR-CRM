@@ -6,6 +6,7 @@ services:
     name: azentio-sdr-backend
     runtime: docker
     plan: free
+    region: singapore # keep in the same region as the Neon database
     dockerfilePath: ./backend/Dockerfile
     dockerContext: .
     healthCheckPath: /health
@@ -24,6 +25,7 @@ services:
     name: azentio-sdr-engine
     runtime: python
     plan: free
+    region: singapore # keep in the same region as the Neon database
     rootDir: ai-sdr-engine
     buildCommand: pip install uv && uv sync --frozen
     startCommand: uv run --frozen uvicorn app.main:app --host 0.0.0.0 --port $PORT
