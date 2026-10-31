@@ -1,0 +1,214 @@
+{
+  "version": "demo-icp-v2",
+  "label": "Demo ICP policy v2 (adds AMLOCK compliance)",
+  "_note": "Internal: synthetic demo policy for the hackathon, not an actual Azentio commercial policy.",
+  "geographies": [
+    "AE",
+    "SA",
+    "BH",
+    "QA",
+    "KW",
+    "OM",
+    "IN"
+  ],
+  "size": {
+    "preferredMin": 200,
+    "belowPreferredFraction": 0.5
+  },
+  "roles": {
+    "decisionMaker": [
+      "c_suite",
+      "vp",
+      "head",
+      "director"
+    ],
+    "influencer": [
+      "manager"
+    ],
+    "titleSeniority": [
+      {
+        "keywords": [
+          "chief",
+          "ceo",
+          "cto",
+          "cfo",
+          "coo",
+          "cio",
+          "cro",
+          "managing director",
+          "president",
+          "founder"
+        ],
+        "seniority": "c_suite"
+      },
+      {
+        "keywords": [
+          "vice president",
+          "svp",
+          "evp",
+          "vp"
+        ],
+        "seniority": "vp"
+      },
+      {
+        "keywords": [
+          "head"
+        ],
+        "seniority": "head"
+      },
+      {
+        "keywords": [
+          "director",
+          "general manager"
+        ],
+        "seniority": "director"
+      },
+      {
+        "keywords": [
+          "manager",
+          "lead"
+        ],
+        "seniority": "manager"
+      },
+      {
+        "keywords": [
+          "analyst",
+          "officer",
+          "associate",
+          "specialist",
+          "executive",
+          "consultant"
+        ],
+        "seniority": "staff"
+      }
+    ]
+  },
+  "weights": {
+    "geography": 30,
+    "institution": 30,
+    "role": 20,
+    "size": 10,
+    "productRelevance": 10
+  },
+  "fitBands": {
+    "High": 75,
+    "Medium": 45
+  },
+  "outsideIcpScoreCap": 44,
+  "products": {
+    "lending_platform": {
+      "name": "Lending Platform",
+      "institutions": {
+        "allowed": [
+          "bank",
+          "nbfc"
+        ],
+        "partial": []
+      },
+      "keywords": [
+        "lending",
+        "loan",
+        "loans",
+        "credit",
+        "origination",
+        "los",
+        "loan origination",
+        "collections",
+        "underwriting",
+        "financing",
+        "digital lending",
+        "msme",
+        "sme",
+        "retail lending"
+      ]
+    },
+    "islamic_banking": {
+      "name": "Islamic Banking Suite",
+      "institutions": {
+        "allowed": [
+          "islamic_bank"
+        ],
+        "partial": [
+          "bank"
+        ]
+      },
+      "keywords": [
+        "islamic",
+        "shariah",
+        "sharia",
+        "murabaha",
+        "ijara",
+        "ijarah",
+        "sukuk",
+        "takaful",
+        "mudaraba",
+        "musharaka",
+        "islamic window",
+        "core banking",
+        "financing"
+      ]
+    },
+    "aml_compliance": {
+      "name": "AMLOCK Financial Crime & Compliance",
+      "institutions": {
+        "allowed": [
+          "bank",
+          "islamic_bank",
+          "nbfc"
+        ],
+        "partial": [
+          "insurer",
+          "fintech"
+        ]
+      },
+      "keywords": [
+        "aml",
+        "anti-money laundering",
+        "anti money laundering",
+        "kyc",
+        "sanctions",
+        "screening",
+        "compliance",
+        "financial crime",
+        "fraud",
+        "transaction monitoring",
+        "alerts",
+        "pep",
+        "adverse media",
+        "regulatory reporting",
+        "investigations"
+      ]
+    }
+  },
+  "institutionAliases": {
+    "bank": [
+      "bank",
+      "commercial bank",
+      "retail bank",
+      "conventional bank"
+    ],
+    "islamic_bank": [
+      "islamic bank",
+      "islamic_bank",
+      "islamic banking",
+      "shariah bank",
+      "islamic"
+    ],
+    "nbfc": [
+      "nbfc",
+      "non-banking financial company",
+      "non banking financial company",
+      "finance company"
+    ],
+    "fintech": [
+      "fintech",
+      "payments",
+      "software"
+    ],
+    "insurer": [
+      "insurer",
+      "insurance",
+      "takaful operator"
+    ]
+  }
+}

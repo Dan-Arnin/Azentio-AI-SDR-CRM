@@ -1,0 +1,208 @@
+<!doctype html>
+<!-- app/static/contact.html - Public Azentio enquiry form (website, webinar and ad variants) that creates a lead -->
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="color-scheme" content="light" />
+    <title>Let's start a conversation | Azentio</title>
+    <link rel="icon" href="/assets/azentio-logo.svg" />
+    <link rel="stylesheet" href="/assets/brand.css" />
+    <style>
+      .example-details { border:0;background:none;padding:0;margin:0 0 22px;color:#16303d;font:12px Poppins,sans-serif;text-decoration:underline;text-underline-offset:4px;cursor:pointer; }
+      .form-feedback.error { color: #a42727; background: #fde8e8; border-radius: 8px; padding: 10px 12px; font-size: 13px; }
+      .field input[aria-invalid="true"], .field select[aria-invalid="true"], .field textarea[aria-invalid="true"] { border-color: #a42727; }
+      .field-error { color: #a42727; font-size: 12px; margin: 4px 0 0; }
+      .submit-button[aria-busy="true"] { opacity: .6; cursor: progress; }
+      .receipt-reference { font-size: 12px; color: #61737b; }
+    </style>
+  </head>
+  <body>
+    <header class="site-header">
+      <a href="https://www.azentio.com/" aria-label="Azentio home"><img class="logo" src="/assets/azentio-logo.svg" alt="Azentio" /></a>
+      <nav class="nav" aria-label="Main navigation">
+        <a class="nav-link" href="https://www.azentio.com/banking/">Solutions</a>
+        <a class="nav-link" href="https://www.azentio.com/about-azentio">About Azentio</a>
+      </nav>
+    </header>
+    <main class="hero">
+      <section class="hero-copy">
+        <div class="eyebrow" id="eyebrow">Built around your next chapter</div>
+        <h1 id="headline">Let’s move<br />your business<br /><span class="underline">forward.</span></h1>
+        <p class="hero-description" id="hero-description">Every transformation starts with a conversation. Tell us what’s next for your business, and let’s explore the right solution together.</p>
+        <ul class="product-links">
+          <li><a class="product-link" href="https://www.azentio.com/banking/lending"><span><i class="product-dot"></i>Lending solutions</span><svg viewBox="0 0 16 16" fill="none" aria-hidden="true"><path d="M3 13 13 3M3 3h10v10" stroke="currentColor" stroke-width="1.3" /></svg></a></li>
+          <li><a class="product-link" href="https://www.azentio.com/banking/imal-islamic-banking"><span><i class="product-dot"></i>iMAL Islamic banking</span><svg viewBox="0 0 16 16" fill="none" aria-hidden="true"><path d="M3 13 13 3M3 3h10v10" stroke="currentColor" stroke-width="1.3" /></svg></a></li>
+          <li><a class="product-link" href="https://www.azentio.com/risk-compliance/transaction-monitoring"><span><i class="product-dot"></i>AMLOCK anti-money laundering</span><svg viewBox="0 0 16 16" fill="none" aria-hidden="true"><path d="M3 13 13 3M3 3h10v10" stroke="currentColor" stroke-width="1.3" /></svg></a></li>
+        </ul>
+        <div class="motif" aria-hidden="true"><div class="motif-block one"></div><div class="motif-block two"></div><div class="motif-cut"></div><div class="motif-line"></div></div>
+        <p class="privacy-note">A little context helps us make your next conversation more useful. Share your priorities, questions, or the challenge you’re working through.</p>
+      </section>
+      <section class="form-card" aria-labelledby="form-heading">
+        <h2 id="form-heading">Let’s start a conversation</h2>
+        <p class="form-intro" id="form-intro">Tell us a little about yourself and what you’re looking for.</p>
+        <button type="button" class="example-details" id="use-example-details">Use example details</button>
+        <form id="enquiry-form" novalidate>
+          <p id="enquiry-error" class="form-feedback error" role="alert" hidden></p>
+          <div class="fields">
+            <div class="field"><label for="firstName">First name<span class="required">*</span></label><input id="firstName" name="firstName" autocomplete="given-name" required placeholder="First name" maxlength="100" /></div>
+            <div class="field"><label for="lastName">Last name<span class="required">*</span></label><input id="lastName" name="lastName" autocomplete="family-name" required placeholder="Last name" maxlength="100" /></div>
+            <div class="field"><label for="email">Business email<span class="required">*</span></label><input id="email" name="email" type="email" autocomplete="email" required placeholder="name@company.com" maxlength="200" /></div>
+            <div class="field"><label for="role">Job title<span class="optional">optional</span></label><input id="role" name="role" autocomplete="organization-title" placeholder="Job title" maxlength="150" /></div>
+            <div class="field"><label for="companyName">Company<span class="required">*</span></label><input id="companyName" name="companyName" autocomplete="organization" required placeholder="Company name" maxlength="200" /></div>
+            <div class="field"><label for="companyDomain">Company website<span class="optional">optional</span></label><input id="companyDomain" name="companyDomain" type="text" inputmode="url" autocomplete="url" placeholder="company.com" maxlength="250" /></div>
+            <div class="field"><label for="country">Country<span class="required">*</span></label>
+              <select id="country" name="country" required>
+                <option value="" selected disabled>Select country</option>
+                <option value="AE">United Arab Emirates</option><option value="SA">Saudi Arabia</option><option value="BH">Bahrain</option><option value="QA">Qatar</option><option value="KW">Kuwait</option><option value="OM">Oman</option><option value="IN">India</option><option value="MY">Malaysia</option><option value="JO">Jordan</option><option value="EG">Egypt</option><option value="PK">Pakistan</option><option value="SG">Singapore</option><option value="GB">United Kingdom</option><option value="DE">Germany</option><option value="US">United States</option>
+              </select></div>
+            <div class="field"><label for="productId">Interested in<span class="required">*</span></label>
+              <select id="productId" name="productId" required>
+                <option value="" selected disabled>Select a solution</option>
+                <option value="lending_platform">Lending solutions</option>
+                <option value="islamic_banking">iMAL Islamic banking</option>
+                <option value="aml_compliance">AMLOCK anti-money laundering</option>
+                <option value="unknown">Something else</option>
+              </select></div>
+            <div class="field"><label for="phone">Phone<span class="optional">optional</span></label><input id="phone" name="phone" type="tel" autocomplete="tel" placeholder="+971 …" maxlength="40" /></div>
+            <div class="field full"><label for="inquiry">How can we help?<span class="required" id="inquiry-req">*</span></label><textarea id="inquiry" name="inquiry" placeholder="Tell us about your priorities or the challenge you’d like to solve." maxlength="4000"></textarea></div>
+          </div>
+          <div class="checkboxes">
+            <label class="checkbox-label" for="contactPermission"><input type="checkbox" id="contactPermission" name="contactPermission" /><span>I’d like Azentio to contact me about my enquiry and relevant solutions.</span></label>
+            <label class="checkbox-label" for="privacyAccepted"><input type="checkbox" id="privacyAccepted" name="privacyAccepted" required /><span>I have read and acknowledge the <a href="https://www.azentio.com/privacy-policy/" target="_blank" rel="noopener">Privacy Policy</a>.<span class="required">*</span></span></label>
+          </div>
+          <button class="submit-button" id="submit-enquiry" type="submit"><span id="submit-label">Let’s talk</span><svg viewBox="0 0 20 20" fill="none" aria-hidden="true"><path d="M3 10h14m-6-6 6 6-6 6" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" /></svg></button>
+          <p class="after-submit">Our team will review your request and get back to you.</p>
+        </form>
+        <div id="enquiry-confirmation" class="confirmation" hidden>
+          <div class="confirmation-mark" aria-hidden="true">✓</div>
+          <h3 id="confirmation-title" tabindex="-1">Thank you.</h3>
+          <p id="confirmation-message"></p>
+          <p id="confirmation-reference" class="receipt-reference"></p>
+          <button type="button" class="dark-button" id="back-to-form">Back to form</button>
+          <a id="view-enquiry" class="workspace-link" href="/workspace#/leads" style="margin-top:16px">View in sales workspace ↗</a>
+        </div>
+      </section>
+    </main>
+    <footer class="page-footer">
+      <span>© 2026 Azentio. All rights reserved.</span>
+      <div class="footer-links"><a href="https://www.azentio.com/privacy-policy/">Privacy Policy</a><a href="https://www.azentio.com/">azentio.com ↗</a></div>
+    </footer>
+    <script>
+      "use strict";
+      const params = new URLSearchParams(location.search);
+      const source = ["website", "webinar", "event", "ad"].includes(params.get("source")) ? params.get("source") : "website";
+      const eventName = params.get("event") || "";
+      const assetName = params.get("asset") || "";
+      const campaignId = params.get("campaign") || "";
+      const $ = id => document.getElementById(id);
+      const PREFILL = {
+        layla: { firstName: "Layla", lastName: "Haddad", email: "layla.haddad@gulfcrescentbank.ae", role: "Head of Digital Lending", companyName: "Gulf Crescent Bank", country: "AE", productId: "lending_platform", phone: "+971 50 555 0101", inquiry: "We are replacing our lending platform. Please arrange a discussion." },
+        yusuf: { firstName: "Yusuf", lastName: "Rahman", email: "yusuf.rahman@alnoorislamic.com.sa", role: "Chief Transformation Officer", companyName: "Al Noor Islamic Bank", country: "SA", productId: "islamic_banking", phone: "+966 55 555 0201", inquiry: "" },
+      };
+
+      // Adapt headline and copy for webinar/event registrations and ad downloads
+      function applyVariant() {
+        if (source === "webinar" || source === "event") {
+          $("eyebrow").textContent = source === "webinar" ? "Webinar registration" : "Event registration";
+          $("headline").textContent = eventName || "Join the conversation";
+          $("hero-description").textContent = "Register your place. We’ll share the session details and follow up with insights relevant to your institution.";
+          $("form-heading").textContent = "Reserve your place";
+          $("submit-label").textContent = "Register";
+          $("inquiry-req").hidden = true;
+        } else if (source === "ad") {
+          $("eyebrow").textContent = "Free download";
+          $("headline").textContent = assetName || "Get the guide";
+          $("hero-description").textContent = "Fill in your details and we’ll send the guide straight to your inbox.";
+          $("form-heading").textContent = "Get your copy";
+          $("submit-label").textContent = "Download";
+          $("inquiry-req").hidden = true;
+        }
+      }
+
+      // Show a field-level error next to an input
+      function fieldError(el, msg) {
+        el.setAttribute("aria-invalid", "true");
+        const p = document.createElement("p"); p.className = "field-error"; p.textContent = msg; el.insertAdjacentElement("afterend", p);
+      }
+      // Keep only the public hostname from a supplied company website.
+      function companyHost(value) {
+        const text = value.trim(); if (!text) return "";
+        try {
+          const url = new URL(/^https?:\/\//i.test(text) ? text : "https://" + text);
+          const host = url.hostname.toLowerCase().replace(/^www\./, "").replace(/\.$/, "");
+          if (!["http:", "https:"].includes(url.protocol) || url.username || url.password || url.port || !host.includes(".") || /^[\d.]+$/.test(host) || !/^[a-z0-9.-]+$/.test(host) || /\.(?:test|example|localhost|local|internal|invalid)$/.test(host)) return null;
+          return host;
+        } catch (_) { return null; }
+      }
+      // Validate required fields and return the first invalid element
+      function validate() {
+        document.querySelectorAll(".field-error").forEach(e => e.remove());
+        document.querySelectorAll("[aria-invalid]").forEach(e => e.removeAttribute("aria-invalid"));
+        const needInquiry = source === "website";
+        const checks = [["firstName", "Enter your first name."], ["lastName", "Enter your last name."], ["email", "Enter your business email."], ["companyName", "Enter your company."], ["country", "Select your country."], ["productId", "Select a solution."]];
+        if (needInquiry) checks.push(["inquiry", "Tell us briefly how we can help."]);
+        let firstBad = null;
+        for (const [id, msg] of checks) { const el = $(id); if (!el.value.trim()) { fieldError(el, msg); firstBad = firstBad || el; } }
+        const em = $("email"); if (em.value.trim() && !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(em.value.trim())) { fieldError(em, "Enter a valid email address."); firstBad = firstBad || em; }
+        const website = $("companyDomain"); if (website.value.trim() && !companyHost(website.value)) { fieldError(website, "Enter your company's public website, such as company.com."); firstBad = firstBad || website; }
+        if (!$("privacyAccepted").checked) { fieldError($("privacyAccepted").closest("label"), "Please acknowledge the Privacy Policy."); firstBad = firstBad || $("privacyAccepted"); }
+        return firstBad;
+      }
+
+      let idemKey = crypto.randomUUID();
+      let previousPayload = "";
+      $("enquiry-form").addEventListener("submit", async e => {
+        e.preventDefault();
+        const bad = validate();
+        if (bad) { bad.focus(); return; }
+        const btn = $("submit-enquiry"); btn.setAttribute("aria-busy", "true"); btn.disabled = true; $("enquiry-error").hidden = true;
+        const v = id => $(id).value.trim();
+        const body = {
+          sourceRecordId: source + "-" + idemKey.slice(0, 12), source, fullName: v("firstName") + " " + v("lastName"), email: v("email"),
+          companyName: v("companyName"), country: v("country"), productId: v("productId"), inquiry: v("inquiry"),
+          privacyAccepted: $("privacyAccepted").checked, contactPermission: $("contactPermission").checked ? "allowed" : "unknown", submittedAt: new Date().toISOString(),
+        };
+        if (v("role")) body.role = v("role");
+        if (v("companyDomain")) body.companyDomain = companyHost(v("companyDomain"));
+        if (v("phone")) body.phone = v("phone");
+        if (eventName) body.eventName = eventName;
+        if (assetName) body.assetName = assetName;
+        if (campaignId) body.campaignId = campaignId;
+        const signature = JSON.stringify({...body,sourceRecordId:undefined,submittedAt:undefined});
+        if (previousPayload && signature !== previousPayload) { idemKey=crypto.randomUUID(); body.sourceRecordId=source+"-"+idemKey.slice(0,12); }
+        previousPayload=signature;
+        try {
+          const r = await fetch("/public/enquiries", { method: "POST", headers: { "Content-Type": "application/json", "Idempotency-Key": idemKey }, body: JSON.stringify(body) });
+          if (!r.ok) throw new Error(String(r.status));
+          const data = await r.json();
+          $("enquiry-form").hidden = true; $("enquiry-confirmation").hidden = false;
+          $("use-example-details").hidden = true;
+          $("view-enquiry").href = "/workspace#/leads/" + encodeURIComponent(data.leadId);
+          $("confirmation-message").textContent = source === "website"
+            ? "We’ve received your enquiry, " + v("firstName") + ". A member of our team will be in touch shortly."
+            : source === "ad" ? "Thanks, " + v("firstName") + ". Your request has been recorded for our team to review."
+            : "You’re registered, " + v("firstName") + ". Your registration has been recorded for our team to review.";
+          $("confirmation-reference").textContent = "Reference: " + String(data.reference || data.leadId || "");
+          $("confirmation-title").focus();
+        } catch (err) {
+          const box = $("enquiry-error"); box.textContent = "We couldn’t send your request just now. Please try again in a moment."; box.hidden = false;
+        } finally { btn.removeAttribute("aria-busy"); btn.disabled = false; }
+      });
+      $("back-to-form").addEventListener("click", () => {
+        $("enquiry-form").reset(); $("use-example-details").hidden=false; idemKey = crypto.randomUUID();
+        $("enquiry-confirmation").hidden = true; $("enquiry-form").hidden = false; $("firstName").focus();
+      });
+      // Fill a controlled example without recording consent or submitting it.
+      $("use-example-details").addEventListener("click", () => {
+        const values = {firstName:"Priya",lastName:"Shah",email:"priya.shah@gulfcrescentbank.ae",role:"Head of Transformation",companyName:"Harbour Bank",country:"AE",productId:"lending_platform",inquiry:"We are reviewing our lending platform and would like to discuss loan origination and collections. Vendor evaluation is planned for Q1 2027."};
+        for (const [field,value] of Object.entries(values)) if ($(field)) $(field).value=value;
+        $("contactPermission").checked=false; $("privacyAccepted").checked=false;
+        idemKey=crypto.randomUUID(); previousPayload="";
+      });
+      applyVariant();
+      const pre = PREFILL[params.get("prefill")];
+      if (pre) { for (const [k, val] of Object.entries(pre)) if ($(k)) $(k).value = val; $("contactPermission").checked = false; $("privacyAccepted").checked = false; }
+    </script>
+  </body>
+</html>

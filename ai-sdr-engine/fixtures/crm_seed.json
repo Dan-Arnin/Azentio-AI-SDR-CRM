@@ -1,0 +1,16 @@
+{
+  "_meta": {"note": "Internal: demo CRM state (accounts, open opportunities, suppression list); fictional institutions.", "version": "crm-seed-v1"},
+  "accounts": [
+    {"id": "acc_gulfcrescent", "domain": "gulfcrescentbank.ae", "name": "Gulf Crescent Bank", "country": "AE", "ownerId": "ae.sara"},
+    {"id": "acc_alnoor", "domain": "alnoorislamic.com.sa", "name": "Al Noor Islamic Bank", "country": "SA", "ownerId": "ae.sara"},
+    {"id": "acc_desertpearl", "domain": "desertpearlbank.com.bh", "name": "Desert Pearl Bank", "country": "BH", "ownerId": "ae.khalid"},
+    {"id": "acc_riyadhoasis", "domain": "riyadhoasisbank.com.sa", "name": "Riyadh Oasis Bank", "country": "SA", "ownerId": "ae.khalid"},
+    {"id": "acc_deccancapital", "domain": "deccancapitalfin.in", "name": "Deccan Capital Finance", "country": "IN", "ownerId": "ae.priya"}
+  ],
+  "opportunities": [
+    {"id": "opp_desertpearl_lending", "accountDomain": "desertpearlbank.com.bh", "accountName": "Desert Pearl Bank", "productId": "lending_platform", "ownerId": "ae.khalid", "stage": "Discovery", "status": "open"}
+  ],
+  "suppressions": [
+    {"email": "faisal.alenezi@sadaffinance.com.kw", "reason": "opted_out", "at": "2026-09-14T08:00:00+00:00"}
+  ]
+}
